@@ -1,0 +1,32 @@
+services:
+  es8:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.6
+    container_name: seismic-es8
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - ELASTIC_PASSWORD=seismic8test
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "127.0.0.1:9200:9200"
+    volumes:
+      - seismic-es8-data:/usr/share/elasticsearch/data
+    mem_limit: 1g
+
+  es7:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.29
+    container_name: seismic-es7
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "127.0.0.1:9210:9200"
+    volumes:
+      - seismic-es7-data:/usr/share/elasticsearch/data
+    mem_limit: 1g
+
+volumes:
+  seismic-es8-data:
+  seismic-es7-data:
