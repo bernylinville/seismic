@@ -69,10 +69,13 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		)
 		kinds = append(kinds, colIndices, colCluster, colReserved)
 
-		state := ui.ListState{Selected: &m.selected, Sort: &m.sort}
+		state := ui.ListState{Selected: &m.selected, Sort: &m.sort, Columns: m.prefs.Frame(h, "roles")}
 		table := ui.Table(c, &state, cols, len(rows), func(row, col int) {
 			roleCell(c, m, rows[row], kinds[col], h.Lang())
 		}).Grow(1).Padding(0, 12, 0, 12)
+		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
+		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
+		m.prefs.Sync(h, "roles", state.Columns)
 		if table.Submitted() && m.selected >= 0 && m.selected < len(rows) {
 			m.detailName = rows[m.selected].Name
 		}

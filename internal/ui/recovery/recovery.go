@@ -46,6 +46,7 @@ type Module struct {
 
 	selectedRow int
 	sort        ui.SortOrder
+	prefs       kit.ColumnPrefs
 }
 
 // New makes the module's state.
@@ -158,7 +159,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		if m.selectedRow >= len(rows) {
 			m.selectedRow = -1
 		}
-		listState := ui.ListState{Selected: &m.selectedRow, Sort: &m.sort}
+		listState := ui.ListState{Selected: &m.selectedRow, Sort: &m.sort, Columns: m.prefs.Frame(h, "recovery")}
 		ui.Table(c, &listState, cols(h.Lang()), len(rows), func(row, col int) {
 			r := rows[row]
 			switch col {
@@ -181,6 +182,9 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 				ui.Text(c, r.StartTime).FontSize(12).TextColor(t.TextMuted)
 			}
 		}).Grow(1).Padding(0, 12, 0, 12)
+		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
+		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
+		m.prefs.Sync(h, "recovery", listState.Columns)
 	})
 }
 

@@ -74,6 +74,7 @@ type Module struct {
 
 	selected int
 	sort     ui.SortOrder
+	prefs    kit.ColumnPrefs
 
 	dialogOpen  bool
 	dialog      dialogKind

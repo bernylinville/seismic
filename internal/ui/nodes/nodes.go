@@ -30,6 +30,7 @@ type Module struct {
 
 	selectedRow int // 选中的行号，-1 为无
 	sort        ui.SortOrder
+	prefs       kit.ColumnPrefs
 
 	detailName string
 	detailJSON string
@@ -298,7 +299,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		if m.selectedRow >= len(rows) {
 			m.selectedRow = -1
 		}
-		listState := ui.ListState{Selected: &m.selectedRow, Sort: &m.sort}
+		listState := ui.ListState{Selected: &m.selectedRow, Sort: &m.sort, Columns: m.prefs.Frame(h, "nodes")}
 		ui.Table(c, &listState, nodesCols(h.Lang()), len(rows), func(row, col int) {
 			r := rows[row]
 			switch col {
@@ -324,6 +325,9 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 				ui.Text(c, r.Version.String()).FontSize(12)
 			}
 		}).Grow(1).Padding(0, 12, 0, 12)
+		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
+		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
+		m.prefs.Sync(h, "nodes", listState.Columns)
 
 		if m.selectedRow >= 0 && m.selectedRow < len(rows) {
 			name := rows[m.selectedRow].Name.String()

@@ -4,11 +4,12 @@ import (
 	"cmp"
 	"context"
 	"slices"
-
-	"seismic/internal/es"
 	"strings"
 
 	"github.com/egoist/mygo/ui"
+
+	"seismic/internal/es"
+	"seismic/internal/ui/kit"
 )
 
 // IndicesState is the indices module's state (see GLOSSARY: Index).
@@ -22,7 +23,7 @@ type IndicesState struct {
 
 	selectedRow int // 选中的行号，-1 为无
 	sort        ui.SortOrder
-
+	prefs       kit.ColumnPrefs
 	// detail 是右侧/下钻详情（设置 JSON），空为无。
 	detail        []byte
 	detailName    string

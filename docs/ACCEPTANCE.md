@@ -28,10 +28,11 @@ go test ./internal/es/ -run Acceptance -v
 
 ```sh
 go tool mygo build -platform darwin/universal
-# → build/darwin-universal/Seismic.app 与 Seismic <version> universal.dmg
+# → build/darwin-universal/Seismic.app（29.9MB，arm64+x86_64 通用二进制）
 ```
 
-无 cgo，任意平台可交叉。分发给别人需要 Developer ID 签名+公证（在 Mac 上做）；自用可跳过。
+无 cgo，任意平台可交叉。**dmg 只能在 macOS 上打**（依赖 hdiutil，Linux 构建会提示
+"Skipping the disk image"）。分发给别人需要 Developer ID 签名+公证（在 Mac 上做）；自用可跳过。
 
 ## 同步到 MacBook 并验收
 
@@ -39,9 +40,12 @@ go tool mygo build -platform darwin/universal
 rsync -av --delete /home/kchou/Work/github/seismic/build/darwin-universal/ <你的mac>:~/seismic-build/
 ```
 
-Mac 上：
+Mac 上（可选先补 dmg）：
 
 ```sh
+hdiutil create -volname Seismic -srcfolder ~/seismic-build/Seismic.app \
+  -ov -format UDZO ~/Desktop/Seismic.dmg
+
 xattr -cr ~/seismic-build/Seismic.app   # 解除隔离（未签名 app 首次运行）
 open ~/seismic-build/Seismic.app
 ```

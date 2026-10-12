@@ -164,7 +164,7 @@ func (m *Module) clusterCard(c *ui.Context, h kit.ModuleHost) {
 	if distribution == "" {
 		distribution = h.Distribution()
 	}
-	ui.Column(c).Grow(1).Background(t.Surface).Radius(8).Padding(16).Gap(8).Children(func() {
+	ui.Column(c).Grow(1).BorderWidth(1, 1, 1, 1).BorderColor(t.Border).Padding(14).Gap(6).Children(func() {
 		ui.Text(c, kit.Tr(h.Lang(), "集群")).FontSize(12).TextColor(t.TextMuted)
 		ui.Text(c, kit.Tr(h.Lang(), orDefault(m.info.ClusterName, "未知集群"))).FontSize(17).Bold()
 		ui.Text(c, m.info.ClusterUUID).FontSize(11).TextColor(t.TextMuted)
@@ -178,7 +178,7 @@ func (m *Module) clusterCard(c *ui.Context, h kit.ModuleHost) {
 func (m *Module) healthCard(c *ui.Context, lang string) {
 	t := c.Theme()
 	status := orDefault(m.health.Status, m.stats.Status)
-	ui.Column(c).Grow(1).Background(t.Surface).Radius(8).Padding(16).Gap(8).Children(func() {
+	ui.Column(c).Grow(1).BorderWidth(1, 1, 1, 1).BorderColor(t.Border).Padding(14).Gap(6).Children(func() {
 		ui.Text(c, kit.Tr(lang, "健康")).FontSize(12).TextColor(t.TextMuted)
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 			kit.Dot(c, 16, kit.HealthColor(c, status))
@@ -195,7 +195,7 @@ func (m *Module) statusCard(c *ui.Context, lang string) {
 	if nodes == 0 {
 		nodes = m.health.NumberOfNodes
 	}
-	ui.Column(c).Grow(1).Background(t.Surface).Radius(8).Padding(16).Gap(8).Children(func() {
+	ui.Column(c).Grow(1).BorderWidth(1, 1, 1, 1).BorderColor(t.Border).Padding(14).Gap(6).Children(func() {
 		ui.Text(c, kit.Tr(lang, "状态")).FontSize(12).TextColor(t.TextMuted)
 		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, fmtInt(nodes)).FontSize(26).Bold()
@@ -208,7 +208,7 @@ func (m *Module) statusCard(c *ui.Context, lang string) {
 
 func (m *Module) dataCard(c *ui.Context, lang string) {
 	t := c.Theme()
-	ui.Column(c).Grow(1).Background(t.Surface).Radius(8).Padding(16).Gap(8).Children(func() {
+	ui.Column(c).Grow(1).BorderWidth(1, 1, 1, 1).BorderColor(t.Border).Padding(14).Gap(6).Children(func() {
 		ui.Text(c, kit.Tr(lang, "数据")).FontSize(12).TextColor(t.TextMuted)
 		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, fmtInt(m.stats.Indices.Docs.Count)).FontSize(26).Bold()

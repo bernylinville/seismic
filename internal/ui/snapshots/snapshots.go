@@ -74,6 +74,8 @@ type Module struct {
 	err        error
 	loadedOnce bool
 	selected   int
+	prefs      kit.ColumnPrefs
+	slmPrefs   kit.ColumnPrefs
 
 	actionErr string
 	actionMsg string
@@ -228,7 +230,7 @@ func (m *Module) snapshotsTable(h kit.ModuleHost, c *ui.Context) {
 	if m.selected >= len(rows) {
 		m.selected = -1
 	}
-	listState := ui.ListState{Selected: &m.selected, Key: func(i int) any { return rows[i].Snapshot }}
+	listState := ui.ListState{Selected: &m.selected, Key: func(i int) any { return rows[i].Snapshot }, Columns: m.prefs.Frame(h, "snapshots")}
 	ui.Table(c, &listState, snapCols(h.Lang()), len(rows), func(row, col int) {
 		r := rows[row]
 		switch col {
@@ -266,6 +268,9 @@ func (m *Module) snapshotsTable(h kit.ModuleHost, c *ui.Context) {
 			})
 		}
 	}).Grow(1).Padding(0, 12, 0, 12)
+	// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
+	// 回调），每帧把改完的布局交回 Sync 比较并持久化。
+	m.prefs.Sync(h, "snapshots", listState.Columns)
 
 	if m.detailName != "" {
 		m.detailView(c, h.Lang())
@@ -334,7 +339,7 @@ func (m *Module) slmSection(h kit.ModuleHost, c *ui.Context) {
 		if m.slmSel >= len(m.slmPolicies) {
 			m.slmSel = -1
 		}
-		listState := ui.ListState{Selected: &m.slmSel, Key: func(i int) any { return m.slmIDs[i] }}
+		listState := ui.ListState{Selected: &m.slmSel, Key: func(i int) any { return m.slmIDs[i] }, Columns: m.slmPrefs.Frame(h, "snapshots.slm")}
 		ui.Table(c, &listState, slmCols(h.Lang()), len(m.slmPolicies), func(row, col int) {
 			id, p := m.slmIDs[row], m.slmPolicies[row]
 			switch col {
@@ -357,6 +362,9 @@ func (m *Module) slmSection(h kit.ModuleHost, c *ui.Context) {
 				})
 			}
 		}).Height(180).Padding(0, 0, 0, 0)
+		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
+		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
+		m.slmPrefs.Sync(h, "snapshots.slm", listState.Columns)
 	})
 }
 

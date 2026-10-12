@@ -68,6 +68,7 @@ type App struct {
 	distribution     string
 	DocsCount        string
 	ShardsText       string
+	StoreText        string
 	UpdatedText      string
 	buildFlavor      string
 	// win and ctx arrive from main once the window exists; goroutines
@@ -185,6 +186,9 @@ func (a *App) backgroundCtx() context.Context {
 func (a *App) toolbar(c *ui.Context) {
 	ui.Toolbar(c, func() {
 		ui.BackButton(c, a.router)
+		ui.ForwardButton(c, a.router)
+		// 方向 A 的结构性决定：集群选择器居工具栏中央，全局上下文一眼可见。
+		ui.Spacer(c)
 		health := map[string]string{"green": "● ", "yellow": "● ", "red": "● ", "unknown": "○ "}[a.ClusterHealth]
 		name := a.ClusterName
 		if name == "" {
@@ -269,6 +273,9 @@ func (a *App) statusbar(c *ui.Context) {
 		}
 		if a.ShardsText != "" {
 			ui.Text(c, a.ShardsText).FontSize(12).TextColor(t.TextMuted)
+		}
+		if a.StoreText != "" {
+			ui.Text(c, a.StoreText).FontSize(12).TextColor(t.TextMuted)
 		}
 		ui.Spacer(c)
 		if a.ClusterVer != "" {

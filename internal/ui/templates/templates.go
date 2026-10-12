@@ -24,6 +24,7 @@ type Module struct {
 
 	filter      string
 	selectedRow int // 选中的行号，-1 为无
+	prefs       kit.ColumnPrefs
 
 	legacyRows []templateRow
 	compRows   []templateRow
@@ -120,7 +121,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		if m.selectedRow >= len(rows) {
 			m.selectedRow = -1
 		}
-		state := ui.ListState{Selected: &m.selectedRow}
+		state := ui.ListState{Selected: &m.selectedRow, Columns: m.prefs.Frame(h, "templates")}
 		table := ui.Table(c, &state, templateCols(h.Lang()), len(rows), func(row, col int) {
 			r := rows[row]
 			switch col {
@@ -132,6 +133,9 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 				ui.Text(c, r.patterns).FontSize(12).SingleLine().TextColor(t.TextMuted)
 			}
 		}).Grow(1).Padding(0, 12, 0, 12)
+		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
+		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
+		m.prefs.Sync(h, "templates", state.Columns)
 		if table.Submitted() {
 			m.showDetail(h, rows[m.selectedRow])
 		}

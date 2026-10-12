@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/egoist/mygo/ui"
@@ -61,11 +62,9 @@ func (a *App) connectTo(c conn.Connection) {
 			a.ClusterName = pick(c.Name, info.ClusterName)
 			a.DistributionName = info.Distribution
 			a.ClusterVer = info.Version
-			if health == "" {
-				health = "unknown"
-			}
 			a.ClusterHealth = health
 			a.UpdatedText = kit.Tr(a.lang, "刚刚更新")
+			go a.refreshHealth() // 立即填充状态条的文档/分片/存储
 		})
 		time.AfterFunc(30*time.Second, a.refreshHealth)
 	}()
@@ -94,16 +93,46 @@ func (a *App) refreshHealth() {
 			return
 		}
 		var h struct {
-			Status string `json:"status"`
+			Status           string `json:"status"`
+			UnassignedShards int    `json:"unassigned_shards"`
 		}
 		if err := resp.JSON(&h); err != nil || h.Status == "" {
 			return
+		}
+		var docs int64
+		var shardsTotal, shardPri int
+		var size int64
+		if sresp, serr := client.Request(ctx, "GET", "_cluster/stats", nil); serr == nil {
+			var s struct {
+				Indices struct {
+					Docs struct {
+						Count int64 `json:"count"`
+					} `json:"docs"`
+					Shards struct {
+						Total     int `json:"total"`
+						Primaries int `json:"primaries"`
+					} `json:"shards"`
+					Store struct {
+						SizeInBytes int64 `json:"size_in_bytes"`
+					} `json:"store"`
+				} `json:"indices"`
+			}
+			if jerr := sresp.JSON(&s); jerr == nil {
+				docs, shardsTotal, shardPri, size = s.Indices.Docs.Count, s.Indices.Shards.Total, s.Indices.Shards.Primaries, s.Indices.Store.SizeInBytes
+			}
 		}
 		a.update(func() {
 			if a.client != client {
 				return
 			}
 			a.ClusterHealth = h.Status
+			a.DocsCount = formatCount(docs)
+			if shardsTotal > 0 {
+				a.ShardsText = kit.Tr(a.lang, "{0} 分片 · {1} 主 · {2} 未分配", shardsTotal, shardPri, h.UnassignedShards)
+			}
+			if size > 0 {
+				a.StoreText = humanSize(size)
+			}
 			a.UpdatedText = kit.Tr(a.lang, "刚刚更新")
 		})
 		time.AfterFunc(30*time.Second, a.refreshHealth)
@@ -137,6 +166,30 @@ func (a *App) saveConnection() {
 	}
 	saved, _ := a.deps.Conns.Get(uuid)
 	a.connectTo(saved)
+}
+
+// formatCount renders 178199002 as "1.78 亿" style short text for the bar.
+func formatCount(n int64) string {
+	switch {
+	case n >= 100_000_000:
+		return fmt.Sprintf("%.2f 亿", float64(n)/100_000_000)
+	case n >= 10_000:
+		return fmt.Sprintf("%.1f 万", float64(n)/10_000)
+	default:
+		return fmt.Sprintf("%d", n)
+	}
+}
+
+func humanSize(bytes int64) string {
+	const unit = 1024.0
+	b := float64(bytes)
+	for _, s := range []string{"B", "KB", "MB", "GB", "TB"} {
+		if b < unit {
+			return fmt.Sprintf("%.1f %s", b, s)
+		}
+		b /= unit
+	}
+	return fmt.Sprintf("%.1f PB", b)
 }
 
 // healthDotColor maps a cluster status to the app's health color.

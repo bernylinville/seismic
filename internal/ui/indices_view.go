@@ -56,7 +56,7 @@ func (a *App) indicesPage(c *ui.Context) {
 		if s.selectedRow >= len(rows) {
 			s.selectedRow = -1
 		}
-		listState := ui.ListState{Selected: &s.selectedRow, Sort: &s.sort}
+		listState := ui.ListState{Selected: &s.selectedRow, Sort: &s.sort, Columns: s.prefs.Frame(a, "indices")}
 		table := ui.Table(c, &listState, indicesCols(a.lang), len(rows), func(row, col int) {
 			r := rows[row]
 			switch col {
@@ -101,6 +101,9 @@ func (a *App) indicesPage(c *ui.Context) {
 				ui.Text(c, r.CreationDate).FontSize(12).TextColor(t.TextMuted)
 			}
 		}).Grow(1).Padding(0, 12, 0, 12)
+		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
+		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
+		s.prefs.Sync(a, "indices", listState.Columns)
 		if table.Submitted() {
 			a.indicesShowDetail(rows[s.selectedRow].Index)
 		}

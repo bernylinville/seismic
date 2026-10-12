@@ -13,16 +13,16 @@ func init() {
 		"安全": "Security",
 
 		// Toolbar, status bar, welcome page.
-		"未连接":    "Not connected",
-		"管理连接…":  "Manage Connections…",
-		"刷新健康状态": "Refresh Health",
-		"工具栏":    "Toolbar",
-		"页面不存在":  "Page not found",
-		"{0} 文档": "{0} docs",
-		"刚刚更新":   "Just updated",
-		"正在连接…":  "Connecting…",
-		"已保存的连接": "Saved connections",
-		"连接":     "Connect",
+		"未连接":                      "Not connected",
+		"管理连接…":                    "Manage Connections…",
+		"刷新健康状态":                   "Refresh Health",
+		"工具栏":                      "Toolbar",
+		"页面不存在":                    "Page not found",
+		"{0} 文档":                   "{0} docs",
+		"{0} 分片 · {1} 主 · {2} 未分配": "{0} shards · {1} primary · {2} unassigned",
+		"正在连接…":                    "Connecting…",
+		"已保存的连接":                   "Saved connections",
+		"连接":                       "Connect",
 
 		// Connection form.
 		"添加连接":   "Add connection",
