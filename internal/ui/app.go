@@ -187,8 +187,21 @@ func (a *App) toolbar(c *ui.Context) {
 			name = "未连接"
 		}
 		ui.MenuButton(c, health+name, func(m *ui.Menu) {
+			if a.deps.Conns != nil {
+				for _, item := range a.deps.Conns.List() {
+					connItem := item
+					if m.Item(connItem.Name).Checked(connItem.UUID == a.deps.Conns.Active()).Chosen() {
+						a.deps.Conns.SetActive(connItem.UUID)
+						a.connectTo(connItem)
+					}
+				}
+			}
+			m.Separator()
 			if m.Item("管理连接…").Chosen() {
-				// 连接管理页在连接模块接线后启用
+				a.Connected = false
+			}
+			if m.Item("刷新健康状态").Chosen() {
+				a.refreshHealth()
 			}
 		})
 		ui.Spacer(c)

@@ -66,6 +66,7 @@ func (a *App) connectTo(c conn.Connection) {
 			a.ClusterHealth = health
 			a.UpdatedText = "刚刚更新"
 		})
+		time.AfterFunc(30*time.Second, a.refreshHealth)
 	}()
 }
 
@@ -85,7 +86,7 @@ func (a *App) refreshHealth() {
 	}
 	client := a.client
 	go func() {
-		ctx, cancel := context.WithTimeout(a.ctx, 10*time.Second)
+		ctx, cancel := context.WithTimeout(a.backgroundCtx(), 10*time.Second)
 		defer cancel()
 		resp, err := client.Request(ctx, "GET", "_cluster/health", nil)
 		if err != nil {
@@ -98,9 +99,13 @@ func (a *App) refreshHealth() {
 			return
 		}
 		a.update(func() {
+			if a.client != client {
+				return
+			}
 			a.ClusterHealth = h.Status
 			a.UpdatedText = "刚刚更新"
 		})
+		time.AfterFunc(30*time.Second, a.refreshHealth)
 	}()
 }
 

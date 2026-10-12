@@ -1,25 +1,185 @@
-// Package recovery builds the「分片恢复」module page.
+// Package recovery builds the「分片恢复」module page: _cat/recovery
+// (newest first) with stage coloring and manual refresh.
 package recovery
 
 import (
+	"context"
+	"sort"
+	"strconv"
+	"strings"
+
 	"github.com/egoist/mygo/ui"
 
 	"seismic/internal/ui/kit"
 )
 
+// Row is one _cat/recovery row.
+type Row struct {
+	Index     string `json:"index"`
+	Shard     string `json:"shard"`
+	Type      string `json:"type"`
+	Stage     string `json:"stage"`
+	Source    string `json:"source"`
+	Node      string `json:"node"`
+	StartTime string `json:"start_time"`
+}
+
+// stageColor: DONE green, failed/aborted red, in-progress yellow.
+func stageColor(stage string) ui.Color {
+	switch stage {
+	case "DONE":
+		return ui.Hex("#2f9e63")
+	case "":
+		return ui.Hex("#d64545")
+	default: // INDEX / VERIFY_INDEX / TRANSLOG / FINALIZE / INIT
+		return ui.Hex("#d9a406")
+	}
+}
+
 // Module holds the 分片恢复 module's state.
 type Module struct {
+	rows       []Row
+	filter     string
+	loading    bool
+	err        error
 	loadedOnce bool
+
+	selectedRow int
+	sort        ui.SortOrder
 }
 
 // New makes the module's state.
-func New() *Module { return &Module{} }
+func New() *Module { return &Module{selectedRow: -1} }
+
+func (m *Module) visibleRows() []Row {
+	f := strings.ToLower(m.filter)
+	rows := make([]Row, 0, len(m.rows))
+	for _, r := range m.rows {
+		if f != "" && !strings.Contains(strings.ToLower(r.Index), f) {
+			continue
+		}
+		rows = append(rows, r)
+	}
+	sort.SliceStable(rows, func(i, j int) bool {
+		cmp := func(a, b Row) int {
+			switch m.sort.Column {
+			case "类型":
+				return strings.Compare(a.Type, b.Type)
+			case "阶段":
+				return strings.Compare(a.Stage, b.Stage)
+			case "来源":
+				return strings.Compare(a.Source, b.Source)
+			case "节点":
+				return strings.Compare(a.Node, b.Node)
+			case "开始时间":
+				return strings.Compare(a.StartTime, b.StartTime)
+			default: // 索引
+				return strings.Compare(a.Index, b.Index)
+			}
+		}
+		c := cmp(rows[i], rows[j])
+		if m.sort.Descending {
+			c = -c
+		}
+		return c < 0
+	})
+	return rows
+}
+
+// load fetches _cat/recovery via the host's client (off-thread).
+func (m *Module) load(h kit.ModuleHost) {
+	client := h.ES()
+	if client == nil {
+		return
+	}
+	h.Load(
+		func() { m.loading = true; m.err = nil },
+		func() func() {
+			resp, err := client.Request(context.Background(), "GET", "_cat/recovery", map[string]any{
+				"format": "json",
+				"s":      "start_time_millis:desc",
+				"h":      "index,shard,type,stage,source,node,start_time",
+			})
+			var rows []Row
+			if err == nil {
+				if err = resp.JSON(&rows); err != nil {
+					rows = nil
+				}
+			}
+			return func() {
+				m.loading = false
+				m.loadedOnce = true
+				m.err = err
+				if err == nil {
+					m.rows = rows
+				}
+			}
+		},
+	)
+}
+
+var cols = []ui.TableColumn{
+	{Title: "索引", Sortable: true},
+	{Title: "分片", Width: 60, Align: ui.End},
+	{Title: "类型", Width: 110, Sortable: true},
+	{Title: "阶段", Width: 140, Sortable: true},
+	{Title: "来源", Width: 150, Sortable: true},
+	{Title: "节点", Sortable: true},
+	{Title: "开始时间", Sortable: true},
+}
 
 // View builds the page; h is the app host.
 func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
+	if !m.loadedOnce && !m.loading && h.ES() != nil {
+		m.load(h)
+	}
 	t := c.Theme()
-	ui.Column(c).Fill().Padding(16).Children(func() {
-		ui.Text(c, "分片恢复").FontSize(20).Bold()
-		ui.Text(c, "模块实现中").TextColor(t.TextMuted)
+
+	ui.Column(c).Fill().Children(func() {
+		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
+			ui.Column(c).Children(func() {
+				ui.Text(c, "分片恢复").FontSize(19).Bold()
+				ui.Text(c, itoa(len(m.visibleRows()))+" 条恢复记录").FontSize(12).TextColor(t.TextMuted)
+			})
+			ui.Spacer(c)
+			ui.SearchField(c, &m.filter).Label("筛选索引…").Placeholder("筛选索引…").Width(220)
+			if ui.Button(c, "刷新").Clicked() {
+				m.load(h)
+			}
+		})
+
+		if kit.StateText(c, m.loading && len(m.rows) == 0, m.err, len(m.visibleRows()) == 0, "没有恢复记录") {
+			return
+		}
+
+		rows := m.visibleRows()
+		if m.selectedRow >= len(rows) {
+			m.selectedRow = -1
+		}
+		listState := ui.ListState{Selected: &m.selectedRow, Sort: &m.sort}
+		ui.Table(c, &listState, cols, len(rows), func(row, col int) {
+			r := rows[row]
+			switch col {
+			case 0:
+				ui.Text(c, r.Index).SingleLine()
+			case 1:
+				ui.Text(c, r.Shard).FontSize(12)
+			case 2:
+				ui.Text(c, r.Type).FontSize(12)
+			case 3:
+				ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+					kit.Dot(c, 7, stageColor(r.Stage))
+					ui.Text(c, r.Stage).FontSize(12)
+				})
+			case 4:
+				ui.Text(c, r.Source).FontSize(12)
+			case 5:
+				ui.Text(c, r.Node).FontSize(12)
+			case 6:
+				ui.Text(c, r.StartTime).FontSize(12).TextColor(t.TextMuted)
+			}
+		}).Grow(1).Padding(0, 12, 0, 12)
 	})
 }
+
+func itoa(n int) string { return strconv.Itoa(n) }
