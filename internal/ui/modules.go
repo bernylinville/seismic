@@ -6,7 +6,6 @@ import "github.com/egoist/mygo/ui"
 // 全部落地后删除本注释与占位实现。
 
 func (a *App) overviewPage(c *ui.Context)     { modulePlaceholder(c, "概览") }
-func (a *App) indicesPage(c *ui.Context)      { modulePlaceholder(c, "索引") }
 func (a *App) searchPage(c *ui.Context)       { modulePlaceholder(c, "搜索") }
 func (a *App) restPage(c *ui.Context)         { modulePlaceholder(c, "REST 控制台") }
 func (a *App) nodesPage(c *ui.Context)        { modulePlaceholder(c, "节点") }

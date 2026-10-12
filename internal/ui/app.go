@@ -70,6 +70,8 @@ type App struct {
 	clusterUUID string
 	connecting  bool
 
+	// 模块状态：每个模块一个文件（indices_state.go 等）。
+	indices IndicesState
 	// Lang is "zh" or "en".
 	Lang string
 }
