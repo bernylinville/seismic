@@ -12,6 +12,8 @@ import (
 
 	"github.com/egoist/mygo/ui"
 
+	"seismic/internal/es"
+	"seismic/internal/ui/editor"
 	"seismic/internal/ui/kit"
 )
 
@@ -29,9 +31,12 @@ type Module struct {
 	indices      []string
 	indicesErr   error
 
-	// 查询编辑区：将来整体替换为 editor.Editor 代码编辑器组件（另行交付）。
-	query     string
-	formatErr string
+	// 查询编辑器（JSON 高亮/补全）与其文本镜像。
+	ed    *editor.Editor
+	query string
+
+	mappedPattern string // 已注入补全 mapping 的 pattern
+	formatErr     string
 
 	from float64
 	size float64
@@ -73,11 +78,16 @@ type searchResponse struct {
 
 // New makes the module's state.
 func New() *Module {
-	return &Module{query: defaultQuery, from: 0, size: 10, selectedRow: -1}
+	m := &Module{query: defaultQuery, from: 0, size: 10, selectedRow: -1}
+	m.ed = editor.New()
+	m.ed.SetText(defaultQuery)
+	m.ed.OnChange(func() { m.query = m.ed.Text() })
+	return m
 }
 
 // Reset 恢复默认查询和分页。
 func (m *Module) Reset() {
+	m.ed.SetText(defaultQuery)
 	m.query = defaultQuery
 	m.from = 0
 	m.size = 10
@@ -192,6 +202,7 @@ func (m *Module) run(h kit.ModuleHost) {
 	if client == nil {
 		return
 	}
+	m.loadMapping(h)
 	body, err := m.searchBody()
 	if err != nil {
 		m.formatErr = "查询不是有效的 JSON：" + err.Error()
@@ -317,26 +328,85 @@ func flatValue(src map[string]any, path string) string {
 	}
 }
 
-// formatQuery pretty-prints the query text; on error it keeps the original
-// text and reports the offending line.
+// formatQuery pretty-prints the query text with key order preserved; on
+// error it keeps the original text and reports the offending line.
 func (m *Module) formatQuery() {
 	text := strings.TrimSpace(m.query)
-	var out bytes.Buffer
-	if err := json.Indent(&out, []byte(text), "", "  "); err != nil {
-		m.formatErr = "格式化失败（第 " + strconv.Itoa(errorLine(text, err)) + " 行附近）：" + err.Error()
+	out, err := editor.FormatJSON(text)
+	if err != nil {
+		line := 1
+		if pos, verr := editor.Validate(text); verr != nil {
+			line = pos.Line
+		}
+		m.formatErr = "格式化失败（第 " + strconv.Itoa(line) + " 行附近）：" + err.Error()
 		return
 	}
 	m.formatErr = ""
-	m.query = out.String()
+	m.ed.SetText(out)
+	m.query = out
 }
 
-// errorLine maps a json error offset to a 1-based line number.
-func errorLine(text string, err error) int {
-	se, ok := err.(*json.SyntaxError)
-	if !ok || se.Offset <= 0 || se.Offset > int64(len(text)) {
-		return 1
+// loadMapping fetches the pattern's mappings and feeds the editor's
+// field-name completion (mapping-aware, see ADR 0003).
+func (m *Module) loadMapping(h kit.ModuleHost) {
+	client := h.ES()
+	pattern := strings.TrimSpace(m.indexPattern)
+	if client == nil || pattern == "" || pattern == m.mappedPattern {
+		return
 	}
-	return 1 + strings.Count(text[:se.Offset], "\n")
+	m.mappedPattern = pattern
+	h.Load(
+		func() {},
+		func() func() {
+			resp, err := client.Request(context.Background(), "GET",
+				es.CleanIndexName(pattern)+"/_mapping?allow_no_indices=true&ignore_unavailable=true", nil)
+			if err != nil {
+				return func() {}
+			}
+			fields := flattenMappings(resp.Body)
+			return func() { m.ed.SetMapping(fields) }
+		},
+	)
+}
+
+// flattenMappings walks the _mapping reply into dot-path field infos,
+// merging the mappings of every index the pattern matched.
+func flattenMappings(body []byte) map[string]editor.FieldInfo {
+	var reply map[string]struct {
+		Mappings struct {
+			Properties map[string]json.RawMessage `json:"properties"`
+		} `json:"mappings"`
+	}
+	if err := json.Unmarshal(body, &reply); err != nil {
+		return nil
+	}
+	fields := map[string]editor.FieldInfo{}
+	for _, idx := range reply {
+		collectFields(idx.Mappings.Properties, "", fields)
+	}
+	return fields
+}
+
+func collectFields(props map[string]json.RawMessage, prefix string, out map[string]editor.FieldInfo) {
+	for name, raw := range props {
+		var f struct {
+			Type       string                     `json:"type"`
+			Properties map[string]json.RawMessage `json:"properties"`
+		}
+		if err := json.Unmarshal(raw, &f); err != nil {
+			continue
+		}
+		full := name
+		if prefix != "" {
+			full = prefix + "." + name
+		}
+		if f.Type != "" {
+			out[full] = editor.FieldInfo{Name: full, Type: f.Type}
+		}
+		if len(f.Properties) > 0 {
+			collectFields(f.Properties, full, out)
+		}
+	}
 }
 
 // prettySource renders the selected row's _source for the detail pane.
@@ -378,9 +448,10 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 				}
 			})
 
-			// 查询编辑：目前用等宽 TextArea；将来替换为 editor.Editor
-			// 代码编辑器组件（高亮/行号，另行交付），状态字段 query 保持不变。
-			ui.TextArea(c, &m.query).Height(170).Font("monospace")
+			// JSON 代码编辑器：高亮/行号/括号匹配/结构+mapping 补全。
+			ui.Column(c).Height(190).Border(1, t.Border).Radius(6).Children(func() {
+				m.ed.View(c)
+			})
 
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 				if ui.Button(c, "格式化 JSON").Clicked() {

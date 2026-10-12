@@ -13,6 +13,7 @@ import (
 
 	"seismic/internal/db"
 	"seismic/internal/es"
+	"seismic/internal/ui/editor"
 	"seismic/internal/ui/kit"
 )
 
@@ -29,6 +30,7 @@ type tab struct {
 	method string
 	path   string
 	body   string
+	ed     *editor.Editor // body 编辑器，nil 时惰性创建
 
 	sending bool
 
@@ -151,7 +153,9 @@ func (m *Module) requestView(h kit.ModuleHost, c *ui.Context) {
 			ui.Text(c, tb.method+" 请求不发送 body；查询参数直接写在路径里，如 _cat/indices?v=true").
 				TextColor(t.TextMuted).FontSize(12)
 		} else {
-			ui.TextArea(c, &tb.body).Font("monospace").Lines(3, 10).Placeholder("请求 body（JSON）")
+			ui.Column(c).Height(150).Border(1, t.Border).Radius(6).Children(func() {
+				m.editorFor(tb).View(c)
+			})
 		}
 
 		ui.Row(c).Gap(8).Children(func() {
@@ -266,6 +270,21 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 func (m *Module) applyToActive(method, path, body string) {
 	tb := &m.tabs[m.active]
 	tb.method, tb.path, tb.body = method, path, body
+	if tb.ed != nil {
+		tb.ed.SetText(body)
+	}
+}
+
+// editorFor returns the tab's JSON editor, creating it on first use and
+// syncing edits back into the tab's body.
+func (m *Module) editorFor(tb *tab) *editor.Editor {
+	if tb.ed == nil {
+		tb.ed = editor.New()
+		tb.ed.SetText(tb.body)
+		t := tb
+		tb.ed.OnChange(func() { t.body = t.ed.Text() })
+	}
+	return tb.ed
 }
 
 // send runs the active tab's request off-thread, records history and
