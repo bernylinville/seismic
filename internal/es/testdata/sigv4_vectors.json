@@ -1,0 +1,85 @@
+[
+  {
+    "name": "get-query",
+    "method": "GET",
+    "url": "https://search-prod.us-east-1.es.amazonaws.com/_cat/indices?bytes=b&h=index%2Chealth&format=json",
+    "headers": {
+      "accept": "application/json",
+      "x-amz-date": "20261012T065022Z"
+    },
+    "body": null,
+    "sessionToken": "",
+    "wantAuthorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20261012/us-east-1/es/aws4_request, SignedHeaders=accept;host;x-amz-date, Signature=4447fb0cb505fdc871c5bbf6f02c56bc50025dd502937b62cc59b56b596df695"
+  },
+  {
+    "name": "get-noquery",
+    "method": "GET",
+    "url": "https://search-prod.us-east-1.es.amazonaws.com/",
+    "headers": {
+      "x-amz-date": "20261012T065022Z"
+    },
+    "body": null,
+    "sessionToken": "",
+    "wantAuthorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20261012/us-east-1/es/aws4_request, SignedHeaders=host;x-amz-date, Signature=91e6e4a1b1acaf497074a908850473d3dad6311579b9b253bb7c784e56b90727"
+  },
+  {
+    "name": "post-json-body",
+    "method": "POST",
+    "url": "https://search-prod.us-east-1.es.amazonaws.com/logs-2026.10.12/_search?size=10",
+    "headers": {
+      "accept": "application/json",
+      "content-type": "application/json",
+      "x-amz-date": "20261012T065022Z"
+    },
+    "body": "{\"query\":{\"match_all\":{}}}",
+    "sessionToken": "",
+    "wantAuthorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20261012/us-east-1/es/aws4_request, SignedHeaders=accept;host;x-amz-date, Signature=d7887b6bd130a0b3fbcbb0e3e2cf012a1c706e7a79b3070f46b171ce3ccaf9e6"
+  },
+  {
+    "name": "put-body-token",
+    "method": "PUT",
+    "url": "https://search-prod.us-east-1.es.amazonaws.com/_snapshot/repo-1",
+    "headers": {
+      "content-type": "application/json",
+      "x-amz-date": "20261012T065022Z",
+      "x-amz-security-token": "AQoDYXdzEPT//////////wEXAMPLEtcMTcy"
+    },
+    "body": "{\"type\":\"fs\",\"settings\":{\"location\":\"/mnt/snap\"}}",
+    "sessionToken": "AQoDYXdzEPT//////////wEXAMPLEtcMTcy",
+    "wantAuthorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20261012/us-east-1/es/aws4_request, SignedHeaders=host;x-amz-date;x-amz-security-token, Signature=19d19873a66c6373358a766508a27ee1ab2e883865aee0359fe1f920f183fdc6"
+  },
+  {
+    "name": "delete-empty",
+    "method": "DELETE",
+    "url": "https://search-prod.us-east-1.es.amazonaws.com/old-index",
+    "headers": {
+      "x-amz-date": "20261012T065022Z"
+    },
+    "body": null,
+    "sessionToken": "",
+    "wantAuthorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20261012/us-east-1/es/aws4_request, SignedHeaders=host;x-amz-date, Signature=9ef352e0e1351cfa15d4c0fa198f743c706537be51e786c009282590adbd9ae8"
+  },
+  {
+    "name": "datemath-path",
+    "method": "GET",
+    "url": "https://search-prod.us-east-1.es.amazonaws.com/%3Clogs-%7Bnow%2Fd%7D%3E/_stats?human=true",
+    "headers": {
+      "x-amz-date": "20261012T065022Z"
+    },
+    "body": null,
+    "sessionToken": "",
+    "wantAuthorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20261012/us-east-1/es/aws4_request, SignedHeaders=host;x-amz-date, Signature=09c4f3ac9edd1e24935610f1f434a9482b6809b209909ee06a840da13a6e6a6a"
+  },
+  {
+    "name": "header-space-value",
+    "method": "GET",
+    "url": "https://search-prod.us-east-1.es.amazonaws.com/_cluster/health",
+    "headers": {
+      "x-amz-date": "20261012T065022Z",
+      "x-custom": "a   b"
+    },
+    "body": null,
+    "sessionToken": "",
+    "wantAuthorization": "AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20261012/us-east-1/es/aws4_request, SignedHeaders=host;x-amz-date;x-custom, Signature=11a68f7d6b29833ec86c436d1ffbb663c0c59f7db74a055bb0654754cde48be8"
+  }
+]
