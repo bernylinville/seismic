@@ -1,27 +1,68 @@
 package ui
 
-import "github.com/egoist/mygo/ui"
+import (
+	"github.com/egoist/mygo/ui"
 
-// 模块页面：P3 各模块逐个实现，逐文件替换本文件中的对应函数。
-// 全部落地后删除本注释与占位实现。
+	"seismic/internal/db"
+	"seismic/internal/es"
+	"seismic/internal/ui/kit"
+)
 
-func (a *App) overviewPage(c *ui.Context)     { modulePlaceholder(c, "概览") }
-func (a *App) searchPage(c *ui.Context)       { modulePlaceholder(c, "搜索") }
-func (a *App) restPage(c *ui.Context)         { modulePlaceholder(c, "REST 控制台") }
-func (a *App) nodesPage(c *ui.Context)        { modulePlaceholder(c, "节点") }
-func (a *App) shardsPage(c *ui.Context)       { modulePlaceholder(c, "分片") }
-func (a *App) recoveryPage(c *ui.Context)     { modulePlaceholder(c, "分片恢复") }
-func (a *App) snapshotsPage(c *ui.Context)    { modulePlaceholder(c, "快照") }
-func (a *App) repositoriesPage(c *ui.Context) { modulePlaceholder(c, "快照仓库") }
-func (a *App) templatesPage(c *ui.Context)    { modulePlaceholder(c, "索引模板") }
-func (a *App) settingsPage(c *ui.Context)     { modulePlaceholder(c, "设置") }
-func (a *App) usersPage(c *ui.Context)        { modulePlaceholder(c, "用户") }
-func (a *App) rolesPage(c *ui.Context)        { modulePlaceholder(c, "角色") }
+var _ kit.ModuleHost = (*App)(nil)
 
-func modulePlaceholder(c *ui.Context, title string) {
-	t := c.Theme()
-	ui.Column(c).Fill().Padding(24).Children(func() {
-		ui.Text(c, title).FontSize(20).Bold()
-		ui.Text(c, "模块实现中").TextColor(t.TextMuted)
-	})
+// ES returns the connected cluster's client.
+func (a *App) ES() *es.Client { return a.client }
+
+// ClusterKey is the connected cluster's UUID.
+func (a *App) ClusterKey() string { return a.clusterUUID }
+
+// Version is the connected cluster's version.
+func (a *App) Version() string { return a.ClusterVer }
+
+// Distribution is "elasticsearch" or "opensearch".
+func (a *App) Distribution() string { return a.DistributionName }
+
+// BuildFlavor is non-empty for special deployments.
+func (a *App) BuildFlavor() string { return a.buildFlavor }
+
+// DB is the local SQLite store (nil when it failed to open).
+func (a *App) DB() *db.Store { return a.deps.DB }
+
+// Load satisfies kit.ModuleHost.
+func (a *App) Load(markLoading func(), fn func() func()) { a.load(markLoading, fn) }
+
+// modulePage routes to a module's builder. Indices stays in this package as
+// the exemplar; the rest each own a package under internal/ui/<module>.
+func (a *App) modulePage(c *ui.Context, mod module) {
+	h := kit.ModuleHost(a)
+	switch mod.Path {
+	case "/overview":
+		a.overviewMod.View(h, c)
+	case "/indices":
+		a.indicesPage(c)
+	case "/search":
+		a.searchMod.View(h, c)
+	case "/rest":
+		a.restMod.View(h, c)
+	case "/nodes":
+		a.nodesMod.View(h, c)
+	case "/shards":
+		a.shardsMod.View(h, c)
+	case "/recovery":
+		a.recoveryMod.View(h, c)
+	case "/snapshots":
+		a.snapshotsMod.View(h, c)
+	case "/repositories":
+		a.repositoriesMod.View(h, c)
+	case "/templates":
+		a.templatesMod.View(h, c)
+	case "/settings":
+		a.settingsMod.View(h, c)
+	case "/users":
+		a.usersMod.View(h, c)
+	case "/roles":
+		a.rolesMod.View(h, c)
+	default:
+		ui.Text(c, mod.Label)
+	}
 }

@@ -58,9 +58,8 @@ func (a *App) connectTo(c conn.Connection) {
 			a.client = client
 			a.clusterUUID = info.UUID
 			a.ClusterName = pick(c.Name, info.ClusterName)
-			a.ClusterURI = c.URI
+			a.DistributionName = info.Distribution
 			a.ClusterVer = info.Version
-			a.Distribution = info.Distribution
 			if health == "" {
 				health = "unknown"
 			}

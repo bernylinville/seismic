@@ -10,6 +10,18 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"seismic/internal/es"
+	"seismic/internal/ui/nodes"
+	"seismic/internal/ui/overview"
+	"seismic/internal/ui/recovery"
+	"seismic/internal/ui/repositories"
+	"seismic/internal/ui/rest"
+	"seismic/internal/ui/roles"
+	"seismic/internal/ui/search"
+	"seismic/internal/ui/settings"
+	"seismic/internal/ui/shards"
+	"seismic/internal/ui/snapshots"
+	"seismic/internal/ui/templates"
+	"seismic/internal/ui/users"
 )
 
 type module struct {
@@ -47,16 +59,17 @@ type App struct {
 	router *ui.Router
 
 	// Connected cluster, refreshed by the connection flow.
-	Connected     bool
-	ClusterName   string
-	ClusterURI    string
-	ClusterHealth string // "green" | "yellow" | "red"
-	ClusterVer    string
-	Distribution  string
-	DocsCount     string
-	ShardsText    string
-	UpdatedText   string
-
+	Connected        bool
+	ClusterName      string
+	ClusterURI       string
+	ClusterHealth    string // "green" | "yellow" | "red"
+	ClusterVer       string
+	DistributionName string
+	distribution     string
+	DocsCount        string
+	ShardsText       string
+	UpdatedText      string
+	buildFlavor      string
 	// win and ctx arrive from main once the window exists; goroutines
 	// report back with update, which runs on the main thread.
 	win *mygo.Window
@@ -72,13 +85,40 @@ type App struct {
 
 	// 模块状态：每个模块一个文件（indices_state.go 等）。
 	indices IndicesState
+
+	overviewMod     *overview.Module
+	searchMod       *search.Module
+	restMod         *rest.Module
+	nodesMod        *nodes.Module
+	shardsMod       *shards.Module
+	recoveryMod     *recovery.Module
+	snapshotsMod    *snapshots.Module
+	repositoriesMod *repositories.Module
+	templatesMod    *templates.Module
+	settingsMod     *settings.Module
+	usersMod        *users.Module
+	rolesMod        *roles.Module
 	// Lang is "zh" or "en".
 	Lang string
 }
 
 // NewApp makes the app state around the given router.
 func NewApp(router *ui.Router) *App {
-	return &App{router: router, Lang: "zh", ClusterHealth: "unknown"}
+	return &App{
+		router: router, Lang: "zh", ClusterHealth: "unknown",
+		overviewMod:     overview.New(),
+		searchMod:       search.New(),
+		restMod:         rest.New(),
+		nodesMod:        nodes.New(),
+		shardsMod:       shards.New(),
+		recoveryMod:     recovery.New(),
+		snapshotsMod:    snapshots.New(),
+		repositoriesMod: repositories.New(),
+		templatesMod:    templates.New(),
+		settingsMod:     settings.New(),
+		usersMod:        users.New(),
+		rolesMod:        roles.New(),
+	}
 }
 
 // Attach wires the window (for cross-goroutine updates) and the app context.
@@ -199,40 +239,6 @@ func (a *App) page(c *ui.Context, r *ui.Route) {
 		}
 	}
 	ui.Text(c, "页面不存在")
-}
-
-// modulePage routes to a module's builder; modules land one file per module.
-func (a *App) modulePage(c *ui.Context, mod module) {
-	switch mod.Path {
-	case "/overview":
-		a.overviewPage(c)
-	case "/indices":
-		a.indicesPage(c)
-	case "/search":
-		a.searchPage(c)
-	case "/rest":
-		a.restPage(c)
-	case "/nodes":
-		a.nodesPage(c)
-	case "/shards":
-		a.shardsPage(c)
-	case "/recovery":
-		a.recoveryPage(c)
-	case "/snapshots":
-		a.snapshotsPage(c)
-	case "/repositories":
-		a.repositoriesPage(c)
-	case "/templates":
-		a.templatesPage(c)
-	case "/settings":
-		a.settingsPage(c)
-	case "/users":
-		a.usersPage(c)
-	case "/roles":
-		a.rolesPage(c)
-	default:
-		ui.Text(c, mod.Label)
-	}
 }
 
 func (a *App) statusbar(c *ui.Context) {
