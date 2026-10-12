@@ -49,10 +49,10 @@ type CompletionContext struct {
 
 // 容器扫描状态。
 const (
-	cfKey = iota + 1 // 对象里等键名
-	cfColon          // 键名后等冒号
-	cfValue          // 等值（冒号后/数组内/顶层）
-	cfComma          // 值后等逗号或收尾
+	cfKey   = iota + 1 // 对象里等键名
+	cfColon            // 键名后等冒号
+	cfValue            // 等值（冒号后/数组内/顶层）
+	cfComma            // 值后等逗号或收尾
 )
 
 type cframe struct {
@@ -85,14 +85,18 @@ scan:
 		case r == ' ' || r == '\t' || r == '\n' || r == '\r':
 			continue
 		case r == '{':
+			ctx.HasWord, ctx.Prefix = false, ""
 			stack = append(stack, cframe{obj: true, state: cfKey, key: top.cur})
 		case r == '[':
+			ctx.HasWord, ctx.Prefix = false, ""
 			stack = append(stack, cframe{state: cfValue, key: top.cur})
 		case r == '}':
+			ctx.HasWord, ctx.Prefix = false, ""
 			if len(stack) > 1 && top.obj {
 				stack = stack[:len(stack)-1]
 			}
 		case r == ']':
+			ctx.HasWord, ctx.Prefix = false, ""
 			if len(stack) > 1 && !top.obj {
 				stack = stack[:len(stack)-1]
 			}
@@ -109,10 +113,11 @@ scan:
 				// 未闭合：光标就在这个字符串里。
 				ctx.InString = true
 				ctx.QuotePos = i
-				ctx.Prefix = unquoteLoose(string(rs[i+1:caret]))
+				ctx.Prefix = unquoteLoose(string(rs[i+1 : caret]))
 				break scan
 			}
 			s := unquoteLoose(string(rs[i+1 : j]))
+			ctx.HasWord, ctx.Prefix = false, ""
 			if top.obj && top.state == cfKey {
 				top.keys = append(top.keys, s)
 				top.cur = s
@@ -122,10 +127,12 @@ scan:
 			}
 			i = j
 		case r == ':':
+			ctx.HasWord, ctx.Prefix = false, ""
 			if top.state == cfColon {
 				top.state = cfValue
 			}
 		case r == ',':
+			ctx.HasWord, ctx.Prefix = false, ""
 			if top.state == cfComma {
 				if top.obj {
 					top.state = cfKey
@@ -236,10 +243,10 @@ const (
 
 // Suggestion 是一条补全建议。
 type Suggestion struct {
-	Label    string // 列表展示
-	Insert   string // 替换半成品后插入的文本
-	Detail   string // 右侧徽标/说明
-	Kind     SuggestionKind
+	Label     string // 列表展示
+	Insert    string // 替换半成品后插入的文本
+	Detail    string // 右侧徽标/说明
+	Kind      SuggestionKind
 	CaretBack int // 插入后光标回退的 rune 数（如 "" 中间）
 }
 

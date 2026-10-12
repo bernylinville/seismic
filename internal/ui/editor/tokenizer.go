@@ -42,16 +42,23 @@ func Tokenize(src string) []Token {
 		case r == ' ' || r == '\t' || r == '\n' || r == '\r':
 			i++
 		case r == '"':
-			j := i + 1
-			for j < len(rs) && rs[j] != '"' {
+			j, closed := i+1, false
+			for j < len(rs) {
 				if rs[j] == '\\' {
 					j += 2 // 转义连同其字符一起吞掉
-				} else {
-					j++
+					continue
 				}
+				if rs[j] == '"' {
+					closed = true
+					break
+				}
+				j++
 			}
-			if j < len(rs) {
+			if closed {
 				j++ // 收尾引号；被截断则 token 到文档末尾为止
+			}
+			if j > len(rs) {
+				j = len(rs) // 末尾悬空转义时钳回
 			}
 			toks = append(toks, Token{TokString, i, j})
 			i = j
@@ -78,27 +85,27 @@ func Tokenize(src string) []Token {
 				j++
 			}
 			if j == i {
-				j++ // 防御：isStructural 判定与 switch 分支不一致时也前进
+				j++ // 防御：孤立的 + . e 等也算一个字面量
 			}
 			toks = append(toks, Token{TokLiteral, i, j})
 			i = j
 		}
 	}
-	markKeys(toks)
+	markKeys(toks, rs)
 	return toks
 }
 
 // markKeys 把后随冒号的字符串 token 标记为键。空白不产 token，
-// 所以直接看 token 序列里的下一个是否是 ':'。
-func markKeys(toks []Token) {
+// 所以键与冒号在 token 序列里必然相邻；数组里的 "a", 不能算键。
+func markKeys(toks []Token, rs []rune) {
 	for i := range toks {
 		if toks[i].Type != TokString {
 			continue
 		}
-		if i+1 < len(toks) && toks[i+1].Type == TokPunct {
-			if toks[i+1].End-toks[i+1].Start == 1 {
-				toks[i].Type = TokKey
-			}
+		next := i + 1
+		if next < len(toks) && toks[next].Type == TokPunct &&
+			toks[next].Start == toks[i].End && rs[toks[next].Start] == ':' {
+			toks[i].Type = TokKey
 		}
 	}
 }

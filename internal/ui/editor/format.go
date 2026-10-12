@@ -22,14 +22,41 @@ type Pos struct {
 // （json.Marshal map 会按字典序重排，不可用）；数字字面量原样保留
 // （UseNumber），字符串按最小转义重写（合法转义与 CJK 原文保留）。
 // 空对象/数组输出为内联的 {} 与 []。
+// 注意 Token() 不返回冒号和逗号，分隔符由状态机合成。
 func FormatJSON(src string) (string, error) {
 	dec := json.NewDecoder(strings.NewReader(src))
 	dec.UseNumber()
 	var b strings.Builder
 	depth := 0
-	nl := true      // 下一个 token 前需要换行+缩进
-	skipClose := false // 内联收尾的容器，其闭合符作为 token 到达时跳过
-	done := false   // 顶层值已完成（之后再有 token 即多余内容）
+	var inObj []bool // 每层是否对象
+	first := true    // 顶层首个 token 前不缩进
+	pendingColon := false
+	needComma := false
+	expectKey := false
+	skipClose := false // 内联收尾的容器，其闭合符 token 到达时跳过
+	done := false      // 顶层值已完成（之后再有 token 即多余内容）
+	sep := func() {
+		if pendingColon {
+			b.WriteString(": ")
+			pendingColon = false
+			return
+		}
+		if needComma {
+			b.WriteByte(',')
+		}
+		if first {
+			first = false
+			return
+		}
+		b.WriteString(indentTo(depth))
+	}
+	scalarDone := func() {
+		needComma = true
+		expectKey = len(inObj) > 0 && inObj[len(inObj)-1]
+		if depth == 0 {
+			done = true
+		}
+	}
 	for {
 		tok, err := dec.Token()
 		if errors.Is(err, io.EOF) {
@@ -42,69 +69,61 @@ func FormatJSON(src string) (string, error) {
 			return "", errors.New("JSON 后有多余内容")
 		}
 		if skipClose {
-			if d, ok := tok.(json.Delim); ok && (d == '}' || d == ']') {
-				skipClose = false
-				continue
-			}
+			// 到达的一定是刚内联写掉的那个闭合符
 			skipClose = false
+			continue
 		}
 		switch t := tok.(type) {
 		case json.Delim:
 			switch t {
 			case '{', '[':
-				if nl {
-					b.WriteString(indentTo(depth))
-				}
+				sep()
 				b.WriteRune(rune(t))
+				needComma = false
 				if dec.More() {
 					depth++
-					nl = true
+					inObj = append(inObj, t == '{')
+					expectKey = t == '{'
 				} else {
 					b.WriteString(closingOf(rune(t)))
-					nl = true
+					needComma = true
 					skipClose = true
+					if depth == 0 {
+						done = true
+					}
 				}
 			case '}', ']':
 				depth--
-				if nl {
-					b.WriteString(indentTo(depth))
-				}
+				inObj = inObj[:len(inObj)-1]
+				b.WriteString(indentTo(depth))
 				b.WriteRune(rune(t))
-				nl = true
-			case ':':
-				b.WriteString(": ")
-				nl = false
-			case ',':
-				b.WriteByte(',')
-				nl = true
+				needComma = true
+				expectKey = len(inObj) > 0 && inObj[len(inObj)-1]
+				if depth == 0 {
+					done = true
+				}
 			}
 		case string:
-			if nl {
-				b.WriteString(indentTo(depth))
-			}
+			sep()
 			writeJSONString(&b, t)
-			nl = false
+			if expectKey && len(inObj) > 0 && inObj[len(inObj)-1] {
+				pendingColon = true
+				expectKey = false
+			} else {
+				scalarDone()
+			}
 		case json.Number:
-			if nl {
-				b.WriteString(indentTo(depth))
-			}
+			sep()
 			b.WriteString(t.String())
-			nl = false
+			scalarDone()
 		case bool:
-			if nl {
-				b.WriteString(indentTo(depth))
-			}
+			sep()
 			b.WriteString(strconv.FormatBool(t))
-			nl = false
+			scalarDone()
 		case nil:
-			if nl {
-				b.WriteString(indentTo(depth))
-			}
+			sep()
 			b.WriteString("null")
-			nl = false
-		}
-		if depth == 0 {
-			done = true
+			scalarDone()
 		}
 	}
 	if !done {
@@ -170,12 +189,32 @@ func Validate(src string) (Pos, error) {
 		if errors.Is(err, io.EOF) {
 			return Pos{1, 1, 0}, errors.New("不完整的 JSON")
 		}
-		return posAt(src, errOffset(err)), err
+		off := errOffset(err)
+		if off == 0 {
+			off = len(src) // EOF 类错误没有偏移，指到文档末尾
+		}
+		return posAt(src, off), err
 	}
 	if dec.More() {
 		return posAt(src, int(dec.InputOffset())), errors.New("JSON 后有多余内容")
 	}
 	return Pos{}, nil
+}
+
+// jsonErrText 把标准库的英文错误翻成稳定的中文短语（状态栏展示）。
+func jsonErrText(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "unexpected EOF"),
+		strings.Contains(msg, "unexpected end of JSON input"):
+		return "JSON 不完整"
+	case strings.HasPrefix(msg, "invalid character"):
+		return "非法字符"
+	}
+	return msg
 }
 
 // errOffset 取出编码/解码错误携带的字节偏移。
