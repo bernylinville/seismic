@@ -4,24 +4,35 @@ import (
 	"testing"
 
 	"github.com/egoist/mygo/ui"
+
+	appui "seismic/internal/ui"
 )
 
-// The view runs without a window in tests, which click and type as a user
-// would.
-func TestView(t *testing.T) {
-	a := &app{}
-	tt := ui.NewTester(a.view, 480, 360)
-	if err := tt.Click("+"); err != nil {
-		t.Fatal(err)
+// TestShellNavigates builds the window without a display and walks the
+// sidebar: the welcome page first, the module pages once connected.
+func TestShellNavigates(t *testing.T) {
+	a := appui.NewApp(ui.NewRouter("/overview"))
+	tt := ui.NewTester(a.View, 1280, 800)
+
+	if !tt.HasText("Seismic") || !tt.HasText("添加连接") {
+		t.Fatalf("welcome page missing, texts %q", tt.Texts())
 	}
-	if a.count != 1 || !tt.HasText("1") {
-		t.Errorf("count %d after a click, texts %q", a.count, tt.Texts())
+
+	a.Connected = true
+	a.ClusterName = "prod-es-8"
+	a.ClusterHealth = "green"
+	a.ClusterVer = "8.14.1"
+	tt.Frame()
+
+	if !tt.HasText("prod-es-8") {
+		t.Errorf("cluster name missing from toolbar, texts %q", tt.Texts())
 	}
-	if err := tt.Click("Name"); err != nil {
-		t.Fatal(err)
+	for _, label := range []string{"概览", "索引", "REST 控制台", "用户", "角色", "快照仓库"} {
+		if err := tt.Click(label); err != nil {
+			t.Fatalf("click %s: %v", label, err)
+		}
 	}
-	tt.Type("Ada")
-	if !tt.HasText("Hello, Ada!") {
-		t.Errorf("texts %q after typing a name", tt.Texts())
+	if a.Router().Path() != "/repositories" {
+		t.Errorf("router path = %s, want /repositories", a.Router().Path())
 	}
 }
