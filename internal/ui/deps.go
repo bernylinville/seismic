@@ -33,7 +33,7 @@ func (a *App) connectTo(c conn.Connection) {
 	a.invalidate()
 	go func() {
 		auth := a.deps.Conns.ESAuth(c)
-		client, info, err := conn.TestConnection(a.backgroundCtx(), c.URI, auth)
+		client, info, err := conn.TestConnection(a.backgroundCtx(), c.URI, auth, conn.TLSConfig(c.TLSInsecure))
 		var health string
 		if err == nil {
 			client.Distribution = info.Distribution
@@ -143,11 +143,12 @@ func (a *App) refreshHealth() {
 func (a *App) saveConnection() {
 	f := &a.connect
 	c := conn.Connection{
-		Name:     pick(f.Name, f.URI),
-		URI:      f.URI,
-		AuthType: f.AuthType,
-		Username: f.Username,
-		Region:   f.Region,
+		Name:        pick(f.Name, f.URI),
+		URI:         f.URI,
+		AuthType:    f.AuthType,
+		Username:    f.Username,
+		Region:      f.Region,
+		TLSInsecure: f.TLSInsecure,
 	}
 	creds := conn.Credentials{
 		Password:        f.Password,

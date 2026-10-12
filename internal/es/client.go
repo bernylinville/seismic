@@ -4,6 +4,7 @@ package es
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -84,8 +85,15 @@ type Client struct {
 	BuildFlavor string
 }
 
-// New builds a client for uri with the given auth.
+// New builds a client for uri with the given auth, verifying TLS as usual.
 func New(uri string, auth Auth) (*Client, error) {
+	return NewWithTLS(uri, auth, nil)
+}
+
+// NewWithTLS builds a client with custom TLS settings; a nil config keeps
+// system verification. Self-signed clusters (the ES docker default) pass a
+// config with InsecureSkipVerify set by the caller's explicit choice.
+func NewWithTLS(uri string, auth Auth, tlsCfg *tls.Config) (*Client, error) {
 	if !strings.HasSuffix(uri, "/") {
 		uri += "/"
 	}
@@ -93,6 +101,9 @@ func New(uri string, auth Auth) (*Client, error) {
 		uri:  uri,
 		auth: auth,
 		http: &http.Client{Timeout: 60 * time.Second},
+	}
+	if tlsCfg != nil {
+		c.http.Transport = &http.Transport{TLSClientConfig: tlsCfg.Clone()}
 	}
 	c.authHeader = clusterAuthHeader(auth)
 	if auth.Type == AuthAWSIAM {

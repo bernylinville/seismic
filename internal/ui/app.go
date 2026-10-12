@@ -4,6 +4,7 @@ package ui
 
 import (
 	"context"
+	"strings"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -378,6 +379,7 @@ func (a *App) connectFormView(c *ui.Context) {
 			ui.TextInput(c, &f.SessionToken).Placeholder(kit.Tr(a.lang, "可选")).Label("Session Token")
 			ui.TextInput(c, &f.Region).Placeholder("us-east-1").Label("Region")
 		}
+		ui.Checkbox(c, &f.TLSInsecure, kit.Tr(a.lang, "跳过 TLS 证书校验（自签名）"))
 		ui.Row(c).Gap(8).Children(func() {
 			if ui.Button(c, kit.Tr(a.lang, "测试连接")).Disabled(f.testing || f.URI == "").Clicked() {
 				a.testConnection()
@@ -396,6 +398,9 @@ func (a *App) connectFormView(c *ui.Context) {
 				color = ui.Hex("#2f9e63")
 			} else {
 				color = ui.Hex("#d64545")
+				if strings.Contains(strings.ToLower(msg), "x509") || strings.Contains(strings.ToLower(msg), "certificate") {
+					msg += "\n" + kit.Tr(a.lang, "自签名集群请勾选「跳过 TLS 证书校验」")
+				}
 			}
 			ui.Text(c, msg).FontSize(12).TextColor(color)
 		}

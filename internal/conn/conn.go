@@ -7,6 +7,7 @@ package conn
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -36,6 +37,10 @@ type Connection struct {
 	AuthType string `json:"authType"` // none | basicAuth | apiKey | awsIAM
 	Username string `json:"username"` // basicAuth
 	Region   string `json:"region"`   // awsIAM
+
+	// TLSInsecure skips certificate verification for self-signed clusters
+	// (the ES 8 docker default turns http TLS on). Explicit user choice.
+	TLSInsecure bool `json:"tlsInsecure,omitempty"`
 }
 
 // Credentials are the secret halves of a connection; which fields matter
@@ -56,6 +61,16 @@ type ClusterInfo struct {
 	BuildFlavor  string // version.build_flavor, default "default"
 	ClusterName  string // cluster_name
 	UUID         string // cluster_uuid (with the pre-5 fallback)
+}
+
+// TLSConfig returns the TLS settings for a connection: nil keeps system
+// verification; insecure clusters opt into InsecureSkipVerify (ES 8 docker
+// ships a self-signed http certificate by default).
+func TLSConfig(insecure bool) *tls.Config {
+	if !insecure {
+		return nil
+	}
+	return &tls.Config{InsecureSkipVerify: true}
 }
 
 // SecretStore holds per-connection secrets keyed by the connection UUID.
@@ -348,8 +363,8 @@ func (s *Store) ESAuth(c Connection) es.Auth {
 // TestConnection dials uri, pings GET /, and returns the client with its
 // Version/Distribution/BuildFlavor set plus the parsed cluster info —
 // elasticvue's adapter.test() followed by connect()'s info extraction.
-func TestConnection(ctx context.Context, uri string, auth es.Auth) (*es.Client, *ClusterInfo, error) {
-	client, err := es.New(uri, auth)
+func TestConnection(ctx context.Context, uri string, auth es.Auth, tlsCfg *tls.Config) (*es.Client, *ClusterInfo, error) {
+	client, err := es.NewWithTLS(uri, auth, tlsCfg)
 	if err != nil {
 		return nil, nil, err
 	}

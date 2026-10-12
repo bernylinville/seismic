@@ -23,6 +23,9 @@ type connectForm struct {
 	AccessKeyID     string
 	SecretAccessKey string
 	SessionToken    string
+
+	// TLSInsecure 跳过自签名证书校验（ES 8 docker 默认开启 http TLS）。
+	TLSInsecure bool
 }
 
 var authChoices = []struct {
@@ -65,7 +68,7 @@ func (a *App) testConnection() {
 	f.tested = false
 	a.invalidate()
 	go func() {
-		_, info, err := conn.TestConnection(a.backgroundCtx(), f.URI, f.auth())
+		_, info, err := conn.TestConnection(a.backgroundCtx(), f.URI, f.auth(), conn.TLSConfig(f.TLSInsecure))
 		a.update(func() {
 			f.testing = false
 			f.tested = true

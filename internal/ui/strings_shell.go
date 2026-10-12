@@ -20,9 +20,10 @@ func init() {
 		"页面不存在":                    "Page not found",
 		"{0} 文档":                   "{0} docs",
 		"{0} 分片 · {1} 主 · {2} 未分配": "{0} shards · {1} primary · {2} unassigned",
-		"正在连接…":                    "Connecting…",
-		"已保存的连接":                   "Saved connections",
-		"连接":                       "Connect",
+		"跳过 TLS 证书校验（自签名）":         "Skip TLS verification (self-signed)",
+		"自签名集群请勾选「跳过 TLS 证书校验」": "For a self-signed cluster, check “Skip TLS verification”",
+		"已保存的连接": "Saved connections",
+		"连接":     "Connect",
 
 		// Connection form.
 		"添加连接":   "Add connection",

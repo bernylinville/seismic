@@ -231,7 +231,7 @@ func TestTestConnection(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	client, ci, err := TestConnection(context.Background(), srv.URL, es.Auth{Type: es.AuthNone})
+	client, ci, err := TestConnection(context.Background(), srv.URL, es.Auth{Type: es.AuthNone}, nil)
 	if err != nil {
 		t.Fatalf("TestConnection: %v", err)
 	}
@@ -257,7 +257,7 @@ func TestTestConnectionFallbacksAndServerless(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, ci, err := TestConnection(context.Background(), srv.URL, es.Auth{Type: es.AuthNone})
+	_, ci, err := TestConnection(context.Background(), srv.URL, es.Auth{Type: es.AuthNone}, nil)
 	if err != nil {
 		t.Fatalf("TestConnection: %v", err)
 	}
@@ -274,12 +274,12 @@ func TestTestConnectionUnreachable(t *testing.T) {
 	url := srv.URL
 	srv.Close() // also covers connection refused via second call below
 
-	if _, _, err := TestConnection(context.Background(), url, es.Auth{Type: es.AuthNone}); err == nil {
+	if _, _, err := TestConnection(context.Background(), url, es.Auth{Type: es.AuthNone}, nil); err == nil {
 		t.Fatal("expected error for unreachable server")
 	}
 	srv2 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { http.Error(w, "boom", 500) }))
 	defer srv2.Close()
-	if _, _, err := TestConnection(context.Background(), srv2.URL, es.Auth{Type: es.AuthNone}); err == nil {
+	if _, _, err := TestConnection(context.Background(), srv2.URL, es.Auth{Type: es.AuthNone}, nil); err == nil {
 		t.Fatal("expected error for 500 response")
 	}
 }
