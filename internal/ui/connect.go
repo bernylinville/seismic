@@ -1,14 +1,12 @@
 package ui
 
 import (
-	"context"
-
+	"seismic/internal/conn"
 	"seismic/internal/es"
 )
 
-// connectForm is the state of the add-connection sheet on the welcome page.
+// connectForm is the state of the add-connection form on the welcome page.
 type connectForm struct {
-	open    bool
 	testing bool
 	tested  bool
 	testOK  bool
@@ -16,7 +14,7 @@ type connectForm struct {
 
 	Name            string
 	URI             string
-	AuthType        string // es.AuthType 值
+	AuthType        string // es.AuthType 值；空为 none
 	Username        string
 	Password        string
 	APIKey          string
@@ -31,7 +29,7 @@ var authChoices = []struct {
 	label string
 }{
 	{es.AuthNone, "无认证"},
-	{es.AuthBasic, "Basic 用户名/密码"},
+	{es.AuthBasic, "Basic"},
 	{es.AuthAPIKey, "API Key"},
 	{es.AuthAWSIAM, "AWS IAM"},
 }
@@ -50,6 +48,15 @@ func (f *connectForm) auth() es.Auth {
 	}
 }
 
+func authLabel(v string) string {
+	for _, ch := range authChoices {
+		if string(ch.value) == v {
+			return ch.label
+		}
+	}
+	return authChoices[0].label
+}
+
 // testConnection pings the cluster with the form's values.
 func (a *App) testConnection() {
 	f := &a.connect
@@ -57,15 +64,7 @@ func (a *App) testConnection() {
 	f.tested = false
 	a.invalidate()
 	go func() {
-		client, err := es.New(f.URI, f.auth())
-		var info map[string]any
-		if err == nil {
-			var resp *es.Response
-			resp, err = client.Request(context.Background(), "GET", "", nil)
-			if err == nil {
-				err = resp.JSON(&info)
-			}
-		}
+		_, info, err := conn.TestConnection(a.backgroundCtx(), f.URI, f.auth())
 		a.update(func() {
 			f.testing = false
 			f.tested = true
@@ -75,19 +74,16 @@ func (a *App) testConnection() {
 				return
 			}
 			f.testOK = true
-			f.testMsg = clusterSummary(info)
+			f.testMsg = info.ClusterName + " · " + info.Distribution + " " + info.Version
 		})
 	}()
 }
 
-func clusterSummary(info map[string]any) string {
-	name, _ := info["cluster_name"].(string)
-	ver, _ := info["version"].(map[string]any)
-	num, _ := ver["number"].(string)
-	dist, _ := ver["distribution"].(string)
-	if dist == "" {
-		dist = "elasticsearch"
-	}
-	s := name + " · " + dist + " " + num
-	return s
+// SetConnectForm fills the add-connection form (tests and deep links).
+func (a *App) SetConnectForm(name, uri, authType string) {
+	f := &a.connect
+	f.Name, f.URI, f.AuthType = name, uri, authType
 }
+
+// ConnectTestMessage reports the last test/connect error (tests).
+func (a *App) ConnectTestMessage() string { return a.connect.testMsg }

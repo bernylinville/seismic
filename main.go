@@ -2,18 +2,24 @@
 package main
 
 import (
+	"context"
 	"log"
+	"path/filepath"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
+	"seismic/internal/conn"
+	"seismic/internal/db"
 	appui "seismic/internal/ui"
 )
 
 func main() {
+	ctx := context.Background()
 	a := appui.NewApp(ui.NewRouter("/overview"))
+
 	mygo.App.WhenReady(func() {
-		mygo.NewWindow(mygo.WindowOptions{
+		win := mygo.NewWindow(mygo.WindowOptions{
 			Title:     "Seismic",
 			Width:     1280,
 			Height:    800,
@@ -22,6 +28,24 @@ func main() {
 			StateKey:  "main",
 			Content:   ui.View(a.View),
 		})
+		a.Attach(win, ctx)
+
+		dir, err := mygo.App.Path(mygo.PathUserData)
+		if err != nil {
+			log.Printf("user data dir: %v", err)
+			return
+		}
+		secrets := conn.NewSecretStore(dir)
+		database, err := db.Open(ctx, filepath.Join(dir, "seismic.db"))
+		if err != nil {
+			log.Printf("open database: %v", err)
+		}
+		conns, err := conn.NewStore(dir, secrets)
+		if err != nil {
+			log.Printf("connections: %v", err)
+			return
+		}
+		a.AttachDeps(appui.Deps{Conns: conns, DB: database, HomeDir: dir})
 	})
 	if err := mygo.App.Run(); err != nil {
 		log.Fatal(err)

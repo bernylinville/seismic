@@ -3,15 +3,15 @@
 package ui
 
 import (
-	"fmt"
-
 	"context"
+	"fmt"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
+
+	"seismic/internal/es"
 )
 
-// module is one sidebar entry; Path is the router path of its page.
 type module struct {
 	Path  string
 	Label string
@@ -65,6 +65,11 @@ type App struct {
 	// connect is the add-connection sheet's state.
 	connect connectForm
 
+	deps        Deps
+	client      *es.Client
+	clusterUUID string
+	connecting  bool
+
 	// Lang is "zh" or "en".
 	Lang string
 }
@@ -81,11 +86,14 @@ func (a *App) Attach(win *mygo.Window, ctx context.Context) {
 }
 
 // update runs f on the main thread and draws a frame; background work ends
-// with it, as the view reads state on the main thread only.
+// with it, as the view reads state on the main thread only. Before Attach
+// (tests), it applies f directly.
 func (a *App) update(f func()) {
 	if a.win != nil {
 		a.win.Update(f)
+		return
 	}
+	f()
 }
 
 func (a *App) invalidate() {
@@ -118,6 +126,14 @@ func (a *App) View(c *ui.Context) {
 
 // Router exposes the app's router (for tests and deep links).
 func (a *App) Router() *ui.Router { return a.router }
+
+// backgroundCtx returns the app context, or Background before Attach.
+func (a *App) backgroundCtx() context.Context {
+	if a.ctx != nil {
+		return a.ctx
+	}
+	return context.Background()
+}
 
 func (a *App) toolbar(c *ui.Context) {
 	ui.Toolbar(c, func() {
@@ -260,11 +276,96 @@ func Circle(c *ui.Context, size float32, color ui.Color) ui.Element {
 
 func (a *App) welcome(c *ui.Context) {
 	t := c.Theme()
-	ui.Column(c).Fill().Center().Gap(14).Children(func() {
-		ui.Text(c, "Seismic").FontSize(34).Bold()
-		ui.Text(c, "macOS 原生 Elasticsearch 客户端").TextColor(t.TextMuted)
-		if ui.PrimaryButton(c, "添加连接").Clicked() {
-			// 连接表单在连接模块接线后启用
+	ui.Column(c).Fill().Center().Children(func() {
+		ui.Column(c).Gap(6).Center().Children(func() {
+			ui.Text(c, "Seismic").FontSize(30).Bold()
+			ui.Text(c, "macOS 原生 Elasticsearch 客户端").TextColor(t.TextMuted)
+		})
+		if a.connecting {
+			ui.Text(c, "正在连接…").TextColor(t.TextMuted)
+		}
+		a.connectionsList(c)
+		a.connectFormView(c)
+	})
+}
+
+func (a *App) connectionsList(c *ui.Context) {
+	if a.deps.Conns == nil {
+		return
+	}
+	t := c.Theme()
+	list := a.deps.Conns.List()
+	if len(list) == 0 {
+		return
+	}
+	ui.Column(c).Gap(4).Width(360).Children(func() {
+		ui.Text(c, "已保存的连接").FontSize(12).TextColor(t.TextMuted)
+		for _, connItem := range list {
+			item := connItem
+			ui.Row(c).Gap(8).AlignItems(ui.Center).Padding(8, 6, 8, 6).
+				Radius(6).Background(t.Surface).Border(1, t.Border).Children(func() {
+				Circle(c, 8, t.TextMuted)
+				ui.Column(c).Grow(1).Children(func() {
+					ui.Text(c, item.Name)
+					ui.Text(c, item.URI).FontSize(11).TextColor(t.TextMuted)
+				})
+				if ui.Button(c, "连接").Clicked() {
+					a.deps.Conns.SetActive(item.UUID)
+					a.connectTo(item)
+				}
+			})
+		}
+	})
+}
+
+func (a *App) connectFormView(c *ui.Context) {
+	t := c.Theme()
+	f := &a.connect
+	ui.Column(c).Gap(8).Width(360).Padding(16).Radius(10).
+		Background(t.Surface).Border(1, t.Border).Children(func() {
+		ui.Text(c, "添加连接").Bold()
+		ui.TextInput(c, &f.Name).Placeholder("名称（可选）").Label("名称")
+		ui.TextInput(c, &f.URI).Placeholder("http://localhost:9200").Label("URI")
+		ui.MenuButton(c, authLabel(f.AuthType), func(m *ui.Menu) {
+			for _, ch := range authChoices {
+				choice := ch
+				if m.Item(choice.label).Checked(f.AuthType == string(choice.value)).Chosen() {
+					f.AuthType = string(choice.value)
+				}
+			}
+		})
+		switch es.AuthType(f.AuthType) {
+		case es.AuthBasic:
+			ui.TextInput(c, &f.Username).Placeholder("elastic").Label("用户名")
+			ui.TextInput(c, &f.Password).Placeholder("••••••").Label("密码")
+		case es.AuthAPIKey:
+			ui.TextInput(c, &f.APIKey).Placeholder("API Key").Label("API Key")
+		case es.AuthAWSIAM:
+			ui.TextInput(c, &f.AccessKeyID).Label("Access Key ID")
+			ui.TextInput(c, &f.SecretAccessKey).Label("Secret Access Key")
+			ui.TextInput(c, &f.SessionToken).Placeholder("可选").Label("Session Token")
+			ui.TextInput(c, &f.Region).Placeholder("us-east-1").Label("Region")
+		}
+		ui.Row(c).Gap(8).Children(func() {
+			if ui.Button(c, "测试连接").Disabled(f.testing || f.URI == "").Clicked() {
+				a.testConnection()
+			}
+			if ui.PrimaryButton(c, "保存并连接").Disabled(f.URI == "").Clicked() {
+				a.saveConnection()
+			}
+		})
+		if f.testing {
+			ui.Text(c, "测试中…").TextColor(t.TextMuted)
+		}
+		if f.tested {
+			color := t.TextMuted
+			msg := f.testMsg
+			if f.testOK {
+				color = ui.Hex("#2f9e63")
+			} else {
+				color = ui.Hex("#d64545")
+			}
+			ui.Text(c, msg).FontSize(12).TextColor(color)
 		}
 	})
 }
