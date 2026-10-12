@@ -24,15 +24,16 @@ func newTestClient(t *testing.T, auth Auth, handler http.HandlerFunc) (*Client, 
 
 func TestClientAuthHeaders(t *testing.T) {
 	cases := []struct {
-		name string
-		auth Auth
-		want string
+		name       string
+		auth       Auth
+		want       string
+		wantPrefix string
 	}{
-		{"none", Auth{Type: AuthNone}, ""},
-		{"basic", Auth{Type: AuthBasic, Username: "elastic", Password: "pass"}, "Basic " + mustB64("elastic:pass")},
-		{"basic username only", Auth{Type: AuthBasic, Username: "elastic"}, "Basic " + mustB64("elastic")},
-		{"api key", Auth{Type: AuthAPIKey, Password: "apikey123"}, "ApiKey apikey123"},
-		{"aws iam uses signer", Auth{Type: AuthAWSIAM, AccessKeyID: "AKID", SecretAccessKey: "SECRET", Region: "us-east-1"}, ""},
+		{"none", Auth{Type: AuthNone}, "", ""},
+		{"basic", Auth{Type: AuthBasic, Username: "elastic", Password: "pass"}, "Basic " + mustB64("elastic:pass"), ""},
+		{"basic username only", Auth{Type: AuthBasic, Username: "elastic"}, "Basic " + mustB64("elastic"), ""},
+		{"api key", Auth{Type: AuthAPIKey, Password: "apikey123"}, "ApiKey apikey123", ""},
+		{"aws iam uses signer", Auth{Type: AuthAWSIAM, AccessKeyID: "AKID", SecretAccessKey: "SECRET", Region: "us-east-1"}, "", "AWS4-HMAC-SHA256 Credential=AKID/"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -44,11 +45,11 @@ func TestClientAuthHeaders(t *testing.T) {
 			if _, err := c.Request(context.Background(), http.MethodGet, "", nil); err != nil {
 				t.Fatal(err)
 			}
-			if got != tc.want {
+			if tc.want != "" && got != tc.want {
 				t.Errorf("Authorization = %q, want %q", got, tc.want)
 			}
-			if tc.name == "aws iam uses signer" && !strings.HasPrefix(got, "AWS4-HMAC-SHA256 Credential=AKID/") {
-				t.Errorf("aws iam not signed: %q", got)
+			if tc.wantPrefix != "" && !strings.HasPrefix(got, tc.wantPrefix) {
+				t.Errorf("Authorization = %q, want prefix %q", got, tc.wantPrefix)
 			}
 		})
 	}
