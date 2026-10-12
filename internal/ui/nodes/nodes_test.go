@@ -13,14 +13,18 @@ import (
 )
 
 // fakeHost runs Load synchronously so tests are deterministic.
-type fakeHost struct{ client *es.Client }
+type fakeHost struct {
+	client *es.Client
+	lang   string
+}
 
 func (f *fakeHost) ES() *es.Client       { return f.client }
 func (f *fakeHost) ClusterKey() string   { return "uuid-123" }
 func (f *fakeHost) Version() string      { return "8.14.1" }
 func (f *fakeHost) Distribution() string { return "elasticsearch" }
-func (f *fakeHost) BuildFlavor() string  { return "" }
 func (f *fakeHost) DB() *db.Store        { return nil }
+func (f *fakeHost) BuildFlavor() string  { return "" }
+func (f *fakeHost) Lang() string         { return f.lang }
 func (f *fakeHost) Load(mark func(), fn func() func()) {
 	mark()
 	fn()()
@@ -60,6 +64,18 @@ func TestNodesRendersTable(t *testing.T) {
 	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1280, 800)
 
 	for _, want := range []string{"node-a", "node-b", "10.0.0.1", "dif", "0.42", "data,ingest", "2 个节点"} {
+		if !tt.HasText(want) {
+			t.Errorf("missing %q, texts %q", want, tt.Texts())
+		}
+	}
+}
+
+func TestNodesEnglishUI(t *testing.T) {
+	host := newHost(t)
+	host.lang = "en"
+	m := New()
+	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1280, 800)
+	for _, want := range []string{"Nodes", "2 nodes", "Hide system attributes"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing %q, texts %q", want, tt.Texts())
 		}

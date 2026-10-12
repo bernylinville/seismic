@@ -18,6 +18,7 @@ import (
 type fakeHost struct {
 	client  *es.Client
 	version string
+	lang    string
 }
 
 func (f *fakeHost) ES() *es.Client       { return f.client }
@@ -26,6 +27,7 @@ func (f *fakeHost) Version() string      { return f.version }
 func (f *fakeHost) Distribution() string { return "elasticsearch" }
 func (f *fakeHost) BuildFlavor() string  { return "" }
 func (f *fakeHost) DB() *db.Store        { return nil }
+func (f *fakeHost) Lang() string         { return f.lang }
 func (f *fakeHost) Load(mark func(), fn func() func()) {
 	mark()
 	fn()()
@@ -118,6 +120,18 @@ func TestSnapshotsListAndDetail(t *testing.T) {
 	}
 	if !tt.HasText("分片 成功 4 / 失败 0 / 总数 4") {
 		t.Fatalf("detail shards missing: %q", tt.Texts())
+	}
+}
+
+func TestSnapshotsEnglishUI(t *testing.T) {
+	_, host := newFakeES(t, "8.14.1")
+	host.lang = "en"
+	m := New()
+	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1000, 700)
+	for _, text := range []string{"Snapshots", "1 snapshots", "SLM policies", "Shards OK", "Restore…"} {
+		if !tt.HasText(text) {
+			t.Fatalf("missing %q in %q", text, tt.Texts())
+		}
 	}
 }
 

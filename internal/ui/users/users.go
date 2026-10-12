@@ -184,15 +184,15 @@ func userBody(f userForm, version string, includePassword bool) map[string]any {
 	return body
 }
 
-// report records a finished write's outcome: op names the operation
-// (“创建用户 alice”)； success shows “已”+op, failure op+“失败”.
-func (m *Module) report(op string, err error) {
+// report records a finished write's outcome; okKey renders success,
+// failKey failure, both with the username as {0}.
+func (m *Module) report(h kit.ModuleHost, okKey, failKey, name string, err error) {
 	m.busy = false
 	if err != nil {
-		m.actionMsg, m.actionErr = op+"失败: "+kit.ErrMessage(err), true
+		m.actionMsg, m.actionErr = kit.Tr(h.Lang(), failKey, name, kit.ErrMessage(err)), true
 		return
 	}
-	m.actionMsg, m.actionErr = "已"+op, false
+	m.actionMsg, m.actionErr = kit.Tr(h.Lang(), okKey, name), false
 }
 
 // createUser PUTs a new user off-thread, then reloads the list.
@@ -206,7 +206,7 @@ func (m *Module) createUser(h kit.ModuleHost) {
 	h.Load(func() { m.busy = true }, func() func() {
 		_, err := client.SecurityUserPut(context.Background(), name, body)
 		return func() {
-			m.report("创建用户 "+name, err)
+			m.report(h, "已创建用户 {0}", "创建用户 {0}失败: {1}", name, err)
 			if err == nil {
 				m.dialogOpen = false
 				m.load(h)
@@ -227,7 +227,7 @@ func (m *Module) updateUser(h kit.ModuleHost) {
 	h.Load(func() { m.busy = true }, func() func() {
 		_, err := client.SecurityUserPut(context.Background(), name, body)
 		return func() {
-			m.report("更新用户 "+name, err)
+			m.report(h, "已更新用户 {0}", "更新用户 {0}失败: {1}", name, err)
 			if err == nil {
 				m.dialogOpen = false
 				m.load(h)
@@ -247,7 +247,7 @@ func (m *Module) changePassword(h kit.ModuleHost) {
 	h.Load(func() { m.busy = true }, func() func() {
 		_, err := client.SecurityUserPutPassword(context.Background(), name, body)
 		return func() {
-			m.report("修改 "+name+" 的密码", err)
+			m.report(h, "已修改 {0} 的密码", "修改 {0} 的密码失败: {1}", name, err)
 			if err == nil {
 				m.dialogOpen = false
 				m.load(h)
@@ -266,7 +266,7 @@ func (m *Module) deleteUser(h kit.ModuleHost) {
 	h.Load(func() { m.busy = true; m.confirmOpen = false }, func() func() {
 		_, err := client.SecurityUserDelete(context.Background(), name)
 		return func() {
-			m.report("删除用户 "+name, err)
+			m.report(h, "已删除用户 {0}", "删除用户 {0}失败: {1}", name, err)
 			if err == nil {
 				m.confirmName = ""
 				m.load(h)

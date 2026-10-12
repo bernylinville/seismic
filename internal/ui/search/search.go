@@ -51,6 +51,7 @@ type Module struct {
 	tookMS       int64
 	selectedRow  int // 选中行号，-1 为无
 	queryParseOK bool
+	lang         string // 当前 UI 语言，由 View 每帧刷新
 }
 
 // hitRow is one hits.hits entry.
@@ -338,7 +339,7 @@ func (m *Module) formatQuery() {
 		if pos, verr := editor.Validate(text); verr != nil {
 			line = pos.Line
 		}
-		m.formatErr = "格式化失败（第 " + strconv.Itoa(line) + " 行附近）：" + err.Error()
+		m.formatErr = kit.Tr(m.lang, "格式化失败（第 {0} 行附近）：{1}", strconv.Itoa(line), err.Error())
 		return
 	}
 	m.formatErr = ""
@@ -420,29 +421,30 @@ func (r *hitRow) prettySource() string {
 
 // View builds the page; h is the app host.
 func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
+	m.lang = h.Lang()
 	if !m.loadedOnce && h.ES() != nil {
 		m.loadIndices(h)
 	}
 	t := c.Theme()
 
 	ui.Column(c).Fill().Padding(16).Gap(12).Children(func() {
-		ui.Text(c, "文档搜索").FontSize(20).Bold()
+		ui.Text(c, kit.Tr(h.Lang(), "文档搜索")).FontSize(20).Bold()
 
 		// 查询区。
 		ui.Column(c).Gap(8).Children(func() {
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-				ui.TextInput(c, &m.indexPattern).Placeholder("索引，如 log-* 或 logs-1,logs-2").Width(240)
+				ui.TextInput(c, &m.indexPattern).Placeholder(kit.Tr(h.Lang(), "索引，如 log-* 或 logs-1,logs-2")).Width(240)
 				if m.indicesErr != nil {
 					ui.Text(c, kit.ErrMessage(m.indicesErr)).FontSize(12).TextColor(ui.Hex("#d64545"))
 				} else {
-					ui.Text(c, fmt.Sprintf("匹配 %d 个索引", m.matchedCount())).FontSize(12).TextColor(t.TextMuted)
+					ui.Text(c, kit.Tr(h.Lang(), "匹配 {0} 个索引", m.matchedCount())).FontSize(12).TextColor(t.TextMuted)
 				}
 				ui.Spacer(c)
 				ui.Text(c, "from").FontSize(12).TextColor(t.TextMuted)
 				ui.NumberInput(c, &m.from, 0, 100000, 10).Width(80)
 				ui.Text(c, "size").FontSize(12).TextColor(t.TextMuted)
 				ui.NumberInput(c, &m.size, 1, 10000, 10).Width(80)
-				if ui.PrimaryButton(c, "搜索").Clicked() {
+				if ui.PrimaryButton(c, kit.Tr(h.Lang(), "搜索")).Clicked() {
 					m.from = 0
 					m.run(h)
 				}
@@ -454,10 +456,10 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			})
 
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-				if ui.Button(c, "格式化 JSON").Clicked() {
+				if ui.Button(c, kit.Tr(h.Lang(), "格式化 JSON")).Clicked() {
 					m.formatQuery()
 				}
-				if ui.Button(c, "重置").Clicked() {
+				if ui.Button(c, kit.Tr(h.Lang(), "重置")).Clicked() {
 					m.Reset()
 				}
 				if m.formatErr != "" {
@@ -468,11 +470,11 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 
 		// 结果区。
 		if !m.ranOnce {
-			ui.Text(c, "输入索引 pattern 与查询后点「搜索」").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "输入索引 pattern 与查询后点「搜索」")).TextColor(t.TextMuted)
 			return
 		}
 		if m.loading {
-			ui.Text(c, "搜索中…").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "搜索中…")).TextColor(t.TextMuted)
 			return
 		}
 		if m.err != nil {
@@ -480,23 +482,23 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			return
 		}
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, fmt.Sprintf("共 %d 条 · %d ms", m.total, m.tookMS)).FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "共 {0} 条 · {1} ms", m.total, m.tookMS)).FontSize(12).TextColor(t.TextMuted)
 			ui.Spacer(c)
-			if ui.Button(c, "上一页").Disabled(m.from <= 0).Clicked() {
+			if ui.Button(c, kit.Tr(h.Lang(), "上一页")).Disabled(m.from <= 0).Clicked() {
 				m.from -= m.size
 				if m.from < 0 {
 					m.from = 0
 				}
 				m.run(h)
 			}
-			if ui.Button(c, "下一页").Disabled(int(m.from)+int(m.size) >= m.total).Clicked() {
+			if ui.Button(c, kit.Tr(h.Lang(), "下一页")).Disabled(int(m.from)+int(m.size) >= m.total).Clicked() {
 				m.from += m.size
 				m.run(h)
 			}
 		})
 
 		if len(m.rows) == 0 {
-			ui.Text(c, "没有命中文档").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "没有命中文档")).TextColor(t.TextMuted)
 			return
 		}
 		if m.selectedRow >= len(m.rows) {

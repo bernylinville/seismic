@@ -16,6 +16,7 @@ import (
 type fakeHost struct {
 	client  *es.Client
 	cluster string
+	lang    string
 }
 
 func (f *fakeHost) ES() *es.Client       { return f.client }
@@ -28,6 +29,7 @@ func (f *fakeHost) Load(mark func(), fn func() func()) {
 	mark()
 	fn()()
 }
+func (f *fakeHost) Lang() string { return f.lang }
 
 func newHost(t *testing.T, statsCalls *atomic.Int32) *fakeHost {
 	t.Helper()
@@ -81,6 +83,22 @@ func TestOverviewRendersCluster(t *testing.T) {
 	tt.Frame()
 	if n := statsCalls.Load(); n != 2 {
 		t.Errorf("stats calls after refresh = %d, want 2", n)
+	}
+}
+
+func TestOverviewEnglishUI(t *testing.T) {
+	var statsCalls atomic.Int32
+	host := newHost(t, &statsCalls)
+	host.lang = "en"
+	m := New()
+	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1280, 800)
+	for _, want := range []string{
+		"Overview", "Cluster at a glance", "5.0 GB on disk", "7 indices",
+		"Active shards 12", "Unassigned shards 3",
+	} {
+		if !tt.HasText(want) {
+			t.Errorf("missing %q, texts %q", want, tt.Texts())
+		}
 	}
 }
 

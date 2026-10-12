@@ -5,7 +5,6 @@ package repositories
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"maps"
 	"slices"
 	"strings"
@@ -59,11 +58,13 @@ func New() *Module {
 	return &Module{selected: -1, newType: "fs", newJSON: settingsTemplate("fs")}
 }
 
-var repoCols = []ui.TableColumn{
-	{Title: "名称", Sortable: true},
-	{Title: "类型", Width: 90},
-	{Title: "设置"},
-	{Title: "操作", Width: 130},
+func repoCols(lang string) []ui.TableColumn {
+	return []ui.TableColumn{
+		{Title: kit.Tr(lang, "名称"), Sortable: true},
+		{Title: kit.Tr(lang, "类型"), Width: 90},
+		{Title: kit.Tr(lang, "设置")},
+		{Title: kit.Tr(lang, "操作"), Width: 130},
+	}
 }
 
 // View builds the page; h is the app host.
@@ -77,15 +78,15 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	ui.Column(c).Fill().Children(func() {
 		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, "快照仓库").FontSize(19).Bold()
-				ui.Text(c, fmt.Sprintf("%d 个仓库", len(m.rows))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "快照仓库")).FontSize(19).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 个仓库", len(m.rows))).FontSize(12).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
-			ui.SearchField(c, &m.filter).Placeholder("筛选仓库…").Width(200)
-			if ui.Button(c, "刷新").Clicked() {
+			ui.SearchField(c, &m.filter).Placeholder(kit.Tr(h.Lang(), "筛选仓库…")).Width(200)
+			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {
 				m.load(h)
 			}
-			if ui.PrimaryButton(c, "新建仓库…").Clicked() {
+			if ui.PrimaryButton(c, kit.Tr(h.Lang(), "新建仓库…")).Clicked() {
 				m.showNew, m.newName, m.newErr = true, "", ""
 				m.newJSON = settingsTemplate(m.newType)
 				m.newFocus = true
@@ -99,10 +100,10 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			ui.Text(c, m.actionMsg).FontSize(12).TextColor(t.TextMuted).Padding(0, 20, 4, 20)
 		}
 		if client == nil {
-			ui.Text(c, "未连接集群").TextColor(t.TextMuted).Padding(0, 16)
+			ui.Text(c, kit.Tr(h.Lang(), "未连接集群")).TextColor(t.TextMuted).Padding(0, 16)
 			return
 		}
-		if kit.StateText(c, m.loading && !m.loadedOnce, m.err, len(m.visibleRows()) == 0, "没有仓库") {
+		if kit.StateText(c, h.Lang(), m.loading && !m.loadedOnce, m.err, len(m.visibleRows()) == 0, kit.Tr(h.Lang(), "没有仓库")) {
 			m.dialogs(h, c)
 			return
 		}
@@ -112,7 +113,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			m.selected = -1
 		}
 		listState := ui.ListState{Selected: &m.selected, Key: func(i int) any { return rows[i].Name }}
-		ui.Table(c, &listState, repoCols, len(rows), func(row, col int) {
+		ui.Table(c, &listState, repoCols(h.Lang()), len(rows), func(row, col int) {
 			r := rows[row]
 			switch col {
 			case 0:
@@ -123,11 +124,11 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 				ui.Text(c, settingsSummary(r.Settings)).FontSize(12).TextColor(t.TextMuted).SingleLine()
 			case 3:
 				ui.Row(c).Gap(6).Children(func() {
-					if ui.Button(c, "验证").Clicked() {
+					if ui.Button(c, kit.Tr(h.Lang(), "验证")).Clicked() {
 						m.actionErr, m.actionMsg = "", ""
 						m.verify(h, r.Name)
 					}
-					if ui.Button(c, "删除…").Clicked() {
+					if ui.Button(c, kit.Tr(h.Lang(), "删除…")).Clicked() {
 						m.deleteName, m.deleteConfirm = r.Name, true
 					}
 				})
@@ -142,32 +143,32 @@ func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
 	t := c.Theme()
 
 	ui.Modal(c, &m.showNew, func() {
-		ui.Text(c, "新建快照仓库").Bold()
+		ui.Text(c, kit.Tr(h.Lang(), "新建快照仓库")).Bold()
 		ui.Form(c, func() {
-			ui.Field(c, "仓库名称", func() {
+			ui.Field(c, kit.Tr(h.Lang(), "仓库名称"), func() {
 				input := ui.TextInput(c, &m.newName)
 				if m.newFocus {
 					input.AutoFocus()
 					m.newFocus = false
 				}
 			})
-			ui.Field(c, "类型", func() {
+			ui.Field(c, kit.Tr(h.Lang(), "类型"), func() {
 				if ui.Select(c, &m.newType, []string{"fs", "s3", "url"}).Changed() {
 					m.newJSON = settingsTemplate(m.newType)
 				}
 			})
-			ui.Field(c, "设置 JSON", func() {
+			ui.Field(c, kit.Tr(h.Lang(), "设置 JSON"), func() {
 				ui.TextInput(c, &m.newJSON)
-			}).Description("仓库 settings，如 " + strings.Join(strings.Fields(settingsTemplate(m.newType)), " "))
+			}).Description(kit.Tr(h.Lang(), "仓库 settings，如 {0}", strings.Join(strings.Fields(settingsTemplate(m.newType)), " ")))
 		})
 		if m.newErr != "" {
 			ui.Text(c, m.newErr).FontSize(12).TextColor(ui.Hex("#d64545"))
 		}
 		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
-			if ui.Button(c, "取消").Clicked() {
+			if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 				m.showNew = false
 			}
-			if ui.PrimaryButton(c, "创建").Clicked() {
+			if ui.PrimaryButton(c, kit.Tr(h.Lang(), "创建")).Clicked() {
 				m.create(h)
 			}
 		})
@@ -176,13 +177,13 @@ func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
 	if m.deleteConfirm {
 		name := m.deleteName
 		ui.Modal(c, &m.deleteConfirm, func() {
-			ui.Text(c, "删除仓库").Bold()
-			ui.Text(c, fmt.Sprintf("确定删除仓库 %s？其快照将不可用。", name)).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "删除仓库")).Bold()
+			ui.Text(c, kit.Tr(h.Lang(), "确定删除仓库 {0}？其快照将不可用。", name)).TextColor(t.TextMuted)
 			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
-				if ui.Button(c, "取消").Clicked() {
+				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.deleteName, m.deleteConfirm = "", false
 				}
-				if ui.PrimaryButton(c, "删除").Clicked() {
+				if ui.PrimaryButton(c, kit.Tr(h.Lang(), "删除")).Clicked() {
 					m.delete(h)
 				}
 			})
@@ -234,12 +235,12 @@ func (m *Module) load(h kit.ModuleHost) {
 
 func (m *Module) create(h kit.ModuleHost) {
 	if m.newName == "" {
-		m.newErr = "名称不能为空"
+		m.newErr = kit.Tr(h.Lang(), "名称不能为空")
 		return
 	}
 	var settings map[string]any
 	if err := json.Unmarshal([]byte(m.newJSON), &settings); err != nil {
-		m.newErr = "settings JSON 无效: " + err.Error()
+		m.newErr = kit.Tr(h.Lang(), "settings JSON 无效: {0}", err.Error())
 		return
 	}
 	client := h.ES()
@@ -271,7 +272,7 @@ func (m *Module) verify(h kit.ModuleHost, name string) {
 	}, func(_ *es.Response, err error) {
 		m.loading = false
 		if err == nil {
-			m.actionMsg = name + " 验证通过"
+			m.actionMsg = kit.Tr(h.Lang(), "{0} 验证通过", name)
 			return
 		}
 		m.actionErr = kit.ErrMessage(err)

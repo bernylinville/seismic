@@ -23,6 +23,8 @@ type ModuleHost interface {
 	BuildFlavor() string
 	// DB is the local SQLite store, nil when it failed to open.
 	DB() *db.Store
+	// Lang is the UI language ("zh" or "en").
+	Lang() string
 	// Load runs fn off-thread; markLoading flips a loading flag first and
 	// fn returns the closure that applies the result on the main thread.
 	Load(markLoading func(), fn func() func())
@@ -60,15 +62,15 @@ func Dot(c *ui.Context, size float32, color ui.Color) ui.Element {
 
 // StateText renders a module's loading/error/empty state; true means the
 // module should build nothing else this frame.
-func StateText(c *ui.Context, loading bool, err error, empty bool, emptyText string) bool {
+func StateText(c *ui.Context, lang string, loading bool, err error, empty bool, emptyText string) bool {
 	t := c.Theme()
 	switch {
 	case loading:
-		ui.Text(c, "加载中…").TextColor(t.TextMuted)
+		ui.Text(c, Tr(lang, "加载中…")).TextColor(t.TextMuted)
 		return true
 	case err != nil:
 		ui.Column(c).Grow(1).Padding(16).Children(func() {
-			ui.Text(c, "请求失败").Bold().TextColor(ui.Hex("#d64545"))
+			ui.Text(c, Tr(lang, "请求失败")).Bold().TextColor(ui.Hex("#d64545"))
 			ui.Text(c, ErrMessage(err)).TextColor(t.TextMuted).FontSize(12)
 		})
 		return true

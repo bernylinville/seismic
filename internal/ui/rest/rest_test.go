@@ -18,7 +18,10 @@ type fakeHost struct {
 	client *es.Client
 	key    string
 	store  *db.Store
+	lang   string
 }
+
+func (f *fakeHost) Lang() string { return f.lang }
 
 func (f *fakeHost) ES() *es.Client       { return f.client }
 func (f *fakeHost) ClusterKey() string   { return f.key }
@@ -215,6 +218,24 @@ func TestErrorResponse(t *testing.T) {
 	}
 	if !tt.HasText("boom") {
 		t.Errorf("missing error body in %q", tt.Texts())
+	}
+}
+
+func TestRestEnglishUI(t *testing.T) {
+	store := newStore(t)
+	host := newFakeHost(t, "cluster-a", store, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"ok":true}`))
+	})
+	host.lang = "en"
+	m := New()
+	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1000, 700)
+	if err := tt.Click("Send"); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"REST Console", "History", "Saved queries", "New tab", "ms"} {
+		if !tt.HasText(want) {
+			t.Errorf("missing %q in %q", want, tt.Texts())
+		}
 	}
 }
 

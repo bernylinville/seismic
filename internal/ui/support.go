@@ -4,6 +4,7 @@ import (
 	"github.com/egoist/mygo/ui"
 
 	"seismic/internal/es"
+	"seismic/internal/ui/kit"
 )
 
 // es returns the connected cluster's client, nil when not connected.
@@ -38,15 +39,15 @@ func errMessage(err error) string {
 
 // loadingText renders a module's loading/error/empty state row; it returns
 // true when the module should not build its content this frame.
-func stateText(c *ui.Context, loading bool, err error, empty bool, emptyText string) bool {
+func stateText(c *ui.Context, lang string, loading bool, err error, empty bool, emptyText string) bool {
 	t := c.Theme()
 	switch {
 	case loading:
-		ui.Text(c, "加载中…").TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(lang, "加载中…")).TextColor(t.TextMuted)
 		return true
 	case err != nil:
 		ui.Column(c).Grow(1).Padding(16).Children(func() {
-			ui.Text(c, "请求失败").Bold().TextColor(ui.Hex("#d64545"))
+			ui.Text(c, kit.Tr(lang, "请求失败")).Bold().TextColor(ui.Hex("#d64545"))
 			ui.Text(c, errMessage(err)).TextColor(t.TextMuted).FontSize(12)
 		})
 		return true

@@ -76,16 +76,16 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 
 	ui.Column(c).Fill().Padding(16).Gap(12).Children(func() {
 		ui.Row(c).Children(func() {
-			ui.Text(c, "REST 控制台").FontSize(20).Bold()
+			ui.Text(c, kit.Tr(h.Lang(), "REST 控制台")).FontSize(20).Bold()
 		})
 
 		ui.Row(c).Gap(8).Children(func() {
 			m.tabStrip(c)
-			if ui.Button(c, "新建标签").Clicked() {
+			if ui.Button(c, kit.Tr(h.Lang(), "新建标签")).Clicked() {
 				m.tabs = append(m.tabs, newTab())
 				m.active = len(m.tabs) - 1
 			}
-			if ui.Button(c, "关闭标签").Clicked() {
+			if ui.Button(c, kit.Tr(h.Lang(), "关闭标签")).Clicked() {
 				m.closeTab()
 			}
 		})
@@ -94,7 +94,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			// 左侧：请求编辑 + 响应。
 			ui.Column(c).Grow(1).Gap(8).Children(func() {
 				m.requestView(h, c)
-				m.responseView(c, t)
+				m.responseView(c, t, h.Lang())
 			})
 			// 右侧：历史 + 保存的查询。
 			m.sideView(h, c, t)
@@ -141,16 +141,16 @@ func (m *Module) requestView(h kit.ModuleHost, c *ui.Context) {
 	ui.Column(c).Border(1, t.Border).Radius(8).Padding(12).Gap(8).Children(func() {
 		ui.Row(c).Gap(8).Children(func() {
 			ui.Select(c, &tb.method, httpMethods).Width(120)
-			if path := ui.TextInput(c, &tb.path).Label("路径").Grow(1); path.Submitted() {
+			if path := ui.TextInput(c, &tb.path).Label(kit.Tr(h.Lang(), "路径")).Grow(1); path.Submitted() {
 				m.send(h)
 			}
-			if ui.Button(c, "发送").Clicked() {
+			if ui.Button(c, kit.Tr(h.Lang(), "发送")).Clicked() {
 				m.send(h)
 			}
 		})
 
 		if tb.method == "GET" || tb.method == "HEAD" {
-			ui.Text(c, tb.method+" 请求不发送 body；查询参数直接写在路径里，如 _cat/indices?v=true").
+			ui.Text(c, kit.Tr(h.Lang(), "{0} 请求不发送 body；查询参数直接写在路径里，如 _cat/indices?v=true", tb.method)).
 				TextColor(t.TextMuted).FontSize(12)
 		} else {
 			ui.Column(c).Height(150).Border(1, t.Border).Radius(6).Children(func() {
@@ -159,29 +159,29 @@ func (m *Module) requestView(h kit.ModuleHost, c *ui.Context) {
 		}
 
 		ui.Row(c).Gap(8).Children(func() {
-			ui.TextInput(c, &m.saveName).Label("查询名称").Placeholder("查询名称").Width(200)
-			if ui.Button(c, "保存查询").Clicked() {
+			ui.TextInput(c, &m.saveName).Label(kit.Tr(h.Lang(), "查询名称")).Placeholder(kit.Tr(h.Lang(), "查询名称")).Width(200)
+			if ui.Button(c, kit.Tr(h.Lang(), "保存查询")).Clicked() {
 				m.saveQuery(h)
 			}
 			if tb.sending {
-				ui.Text(c, "发送中…").TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "发送中…")).TextColor(t.TextMuted)
 			}
 		})
 	})
 }
 
 // responseView renders the active tab's last response.
-func (m *Module) responseView(c *ui.Context, t *ui.Theme) {
+func (m *Module) responseView(c *ui.Context, t *ui.Theme, lang string) {
 	tb := &m.tabs[m.active]
 
 	ui.Column(c).Grow(1).Border(1, t.Border).Radius(8).Padding(12).Gap(8).Children(func() {
 		if !tb.sent {
-			ui.Text(c, "尚未发送请求").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(lang, "尚未发送请求")).TextColor(t.TextMuted)
 			return
 		}
 		ui.Row(c).Gap(12).Children(func() {
 			ui.Text(c, fmt.Sprintf("%d", tb.status)).Bold().TextColor(statusColor(tb.status))
-			ui.Text(c, fmt.Sprintf("耗时 %d ms", tb.durMS)).TextColor(t.TextMuted).FontSize(12)
+			ui.Text(c, kit.Tr(lang, "耗时 {0} ms", tb.durMS)).TextColor(t.TextMuted).FontSize(12)
 			if tb.respErr != "" {
 				ui.Text(c, tb.respErr).TextColor(ui.Hex("#d64545")).FontSize(12)
 			}
@@ -214,8 +214,8 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 		// 历史
 		ui.Column(c).Border(1, t.Border).Radius(8).Padding(12).Gap(8).Grow(1).Children(func() {
 			ui.Row(c).Children(func() {
-				ui.Text(c, "历史").Bold().Grow(1)
-				if ui.Button(c, "清空历史").Clicked() {
+				ui.Text(c, kit.Tr(h.Lang(), "历史")).Bold().Grow(1)
+				if ui.Button(c, kit.Tr(h.Lang(), "清空历史")).Clicked() {
 					m.clearHistory(h)
 				}
 			})
@@ -224,9 +224,9 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 			}
 			if len(m.history) == 0 {
 				if m.histLoading {
-					ui.Text(c, "加载中…").TextColor(t.TextMuted)
+					ui.Text(c, kit.Tr(h.Lang(), "加载中…")).TextColor(t.TextMuted)
 				} else {
-					ui.Text(c, "暂无历史").TextColor(t.TextMuted)
+					ui.Text(c, kit.Tr(h.Lang(), "暂无历史")).TextColor(t.TextMuted)
 				}
 				return
 			}
@@ -245,9 +245,9 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 
 		// 保存的查询
 		ui.Column(c).Border(1, t.Border).Radius(8).Padding(12).Gap(8).Children(func() {
-			ui.Text(c, "保存的查询").Bold()
+			ui.Text(c, kit.Tr(h.Lang(), "保存的查询")).Bold()
 			if len(m.saved) == 0 {
-				ui.Text(c, "暂无保存的查询").TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "暂无保存的查询")).TextColor(t.TextMuted)
 				return
 			}
 			ui.List(c, nil, len(m.saved), func(i int) {
@@ -255,7 +255,7 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 				row := ui.Row(c).Gap(8).Children(func() {
 					ui.Text(c, q.Name).FontSize(12).Grow(1)
 					ui.Text(c, q.Method).TextColor(t.TextMuted).FontSize(12)
-					if ui.Button(c, "删除").Clicked() {
+					if ui.Button(c, kit.Tr(h.Lang(), "删除")).Clicked() {
 						m.deleteQuery(h, q.ID)
 					}
 				})

@@ -18,6 +18,7 @@ import (
 // fakeHost implements kit.ModuleHost with a synchronous Load.
 type fakeHost struct {
 	client *es.Client
+	lang   string
 }
 
 func (f *fakeHost) ES() *es.Client       { return f.client }
@@ -26,6 +27,7 @@ func (f *fakeHost) Version() string      { return "8.14.0" }
 func (f *fakeHost) Distribution() string { return "elasticsearch" }
 func (f *fakeHost) BuildFlavor() string  { return "" }
 func (f *fakeHost) DB() *db.Store        { return nil }
+func (f *fakeHost) Lang() string         { return f.lang }
 func (f *fakeHost) Load(mark func(), fn func() func()) {
 	mark()
 	fn()()
@@ -96,6 +98,21 @@ func TestSearchResultsTable(t *testing.T) {
 	}
 	if !tt.HasText("共 35 条") {
 		t.Errorf("missing total text; texts: %q", tt.Texts())
+	}
+}
+
+func TestSearchEnglishUI(t *testing.T) {
+	client, _ := newFakeES(t)
+	host := &fakeHost{client: client, lang: "en"}
+	m := New()
+	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 900, 600)
+	if err := tt.Click("Search"); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"Document search", "35 hits", "Previous", "Next"} {
+		if !tt.HasText(want) {
+			t.Errorf("missing %q; texts: %q", want, tt.Texts())
+		}
 	}
 }
 

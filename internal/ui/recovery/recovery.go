@@ -118,14 +118,16 @@ func (m *Module) load(h kit.ModuleHost) {
 	)
 }
 
-var cols = []ui.TableColumn{
-	{Title: "索引", Sortable: true},
-	{Title: "分片", Width: 60, Align: ui.End},
-	{Title: "类型", Width: 110, Sortable: true},
-	{Title: "阶段", Width: 140, Sortable: true},
-	{Title: "来源", Width: 150, Sortable: true},
-	{Title: "节点", Sortable: true},
-	{Title: "开始时间", Sortable: true},
+func cols(lang string) []ui.TableColumn {
+	return []ui.TableColumn{
+		{Title: kit.Tr(lang, "索引"), Sortable: true},
+		{Title: kit.Tr(lang, "分片"), Width: 60, Align: ui.End},
+		{Title: kit.Tr(lang, "类型"), Width: 110, Sortable: true},
+		{Title: kit.Tr(lang, "阶段"), Width: 140, Sortable: true},
+		{Title: kit.Tr(lang, "来源"), Width: 150, Sortable: true},
+		{Title: kit.Tr(lang, "节点"), Sortable: true},
+		{Title: kit.Tr(lang, "开始时间"), Sortable: true},
+	}
 }
 
 // View builds the page; h is the app host.
@@ -138,17 +140,17 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	ui.Column(c).Fill().Children(func() {
 		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, "分片恢复").FontSize(19).Bold()
-				ui.Text(c, itoa(len(m.visibleRows()))+" 条恢复记录").FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "分片恢复")).FontSize(19).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 条恢复记录", itoa(len(m.visibleRows())))).FontSize(12).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
-			ui.SearchField(c, &m.filter).Label("筛选索引…").Placeholder("筛选索引…").Width(220)
-			if ui.Button(c, "刷新").Clicked() {
+			ui.SearchField(c, &m.filter).Label(kit.Tr(h.Lang(), "筛选索引…")).Placeholder(kit.Tr(h.Lang(), "筛选索引…")).Width(220)
+			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {
 				m.load(h)
 			}
 		})
 
-		if kit.StateText(c, m.loading && len(m.rows) == 0, m.err, len(m.visibleRows()) == 0, "没有恢复记录") {
+		if kit.StateText(c, h.Lang(), m.loading && len(m.rows) == 0, m.err, len(m.visibleRows()) == 0, kit.Tr(h.Lang(), "没有恢复记录")) {
 			return
 		}
 
@@ -157,7 +159,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			m.selectedRow = -1
 		}
 		listState := ui.ListState{Selected: &m.selectedRow, Sort: &m.sort}
-		ui.Table(c, &listState, cols, len(rows), func(row, col int) {
+		ui.Table(c, &listState, cols(h.Lang()), len(rows), func(row, col int) {
 			r := rows[row]
 			switch col {
 			case 0:

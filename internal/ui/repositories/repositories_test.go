@@ -17,6 +17,7 @@ import (
 type fakeHost struct {
 	client  *es.Client
 	version string
+	lang    string
 }
 
 func (f *fakeHost) ES() *es.Client       { return f.client }
@@ -25,6 +26,7 @@ func (f *fakeHost) Version() string      { return f.version }
 func (f *fakeHost) Distribution() string { return "elasticsearch" }
 func (f *fakeHost) BuildFlavor() string  { return "" }
 func (f *fakeHost) DB() *db.Store        { return nil }
+func (f *fakeHost) Lang() string         { return f.lang }
 func (f *fakeHost) Load(mark func(), fn func() func()) {
 	mark()
 	fn()()
@@ -100,6 +102,24 @@ func TestRepositoriesListAndVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !tt.HasText("repo1 验证通过") {
+		t.Fatalf("verify message missing: %q", tt.Texts())
+	}
+}
+
+func TestRepositoriesEnglishUI(t *testing.T) {
+	_, host := newFakeES(t)
+	host.lang = "en"
+	m := New()
+	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 900, 600)
+	for _, text := range []string{"Snapshot Repositories", "2 repositories", "Verify"} {
+		if !tt.HasText(text) {
+			t.Fatalf("missing %q in %q", text, tt.Texts())
+		}
+	}
+	if err := tt.Click("Verify"); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText("repo1 verified") {
 		t.Fatalf("verify message missing: %q", tt.Texts())
 	}
 }

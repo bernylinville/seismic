@@ -312,20 +312,20 @@ func buildRoleBody(f roleForm, existing map[string]any, version string) (map[str
 	return body, nil
 }
 
-// report records a finished write's outcome: op names the operation
-// (“创建角色 reader”)； success shows “已”+op, failure op+“失败”.
-func (m *Module) report(op string, err error) {
+// report records a finished write's outcome; okKey renders success,
+// failKey failure, both with the role name as {0}.
+func (m *Module) report(h kit.ModuleHost, okKey, failKey, name string, err error) {
 	m.busy = false
 	if err != nil {
-		m.actionMsg, m.actionErr = op+"失败: "+kit.ErrMessage(err), true
+		m.actionMsg, m.actionErr = kit.Tr(h.Lang(), failKey, name, kit.ErrMessage(err)), true
 		return
 	}
-	m.actionMsg, m.actionErr = "已"+op, false
+	m.actionMsg, m.actionErr = kit.Tr(h.Lang(), okKey, name), false
 }
 
 // putRole PUTs the form off-thread, then reloads the list; when editing it
 // starts from the role's existing raw body.
-func (m *Module) putRole(h kit.ModuleHost, name, op string) {
+func (m *Module) putRole(h kit.ModuleHost, name, okKey, failKey string) {
 	client := h.ES()
 	if client == nil {
 		return
@@ -340,13 +340,13 @@ func (m *Module) putRole(h kit.ModuleHost, name, op string) {
 	}
 	body, err := buildRoleBody(m.form, existing, h.Version())
 	if err != nil {
-		m.actionMsg, m.actionErr = op+"失败: "+err.Error(), true
+		m.actionMsg, m.actionErr = kit.Tr(h.Lang(), failKey, name, err.Error()), true
 		return
 	}
 	h.Load(func() { m.busy = true }, func() func() {
 		_, err := client.SecurityRolePut(context.Background(), name, body)
 		return func() {
-			m.report(op, err)
+			m.report(h, okKey, failKey, name, err)
 			if err == nil {
 				m.dialogOpen = false
 				m.load(h)
@@ -358,13 +358,13 @@ func (m *Module) putRole(h kit.ModuleHost, name, op string) {
 // createRole PUTs a new role.
 func (m *Module) createRole(h kit.ModuleHost) {
 	name := strings.TrimSpace(m.form.Name)
-	m.putRole(h, name, "创建角色 "+name)
+	m.putRole(h, name, "已创建角色 {0}", "创建角色 {0}失败: {1}")
 }
 
 // updateRole PUTs an edited role.
 func (m *Module) updateRole(h kit.ModuleHost) {
 	name := strings.TrimSpace(m.form.Name)
-	m.putRole(h, name, "更新角色 "+name)
+	m.putRole(h, name, "已更新角色 {0}", "更新角色 {0}失败: {1}")
 }
 
 // deleteRole DELETEs a role off-thread, then reloads the list.
@@ -377,7 +377,7 @@ func (m *Module) deleteRole(h kit.ModuleHost) {
 	h.Load(func() { m.busy = true; m.confirmOpen = false }, func() func() {
 		_, err := client.SecurityRoleDelete(context.Background(), name)
 		return func() {
-			m.report("已删除角色 "+name, err)
+			m.report(h, "已删除角色 {0}", "删除角色 {0}失败: {1}", name, err)
 			if err == nil {
 				m.confirmName = ""
 				m.load(h)

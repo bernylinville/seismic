@@ -28,6 +28,12 @@ func (a *App) BuildFlavor() string { return a.buildFlavor }
 // DB is the local SQLite store (nil when it failed to open).
 func (a *App) DB() *db.Store { return a.deps.DB }
 
+// SetLang switches the UI language ("zh" or "en").
+func (a *App) SetLang(lang string) { a.lang = lang }
+
+// Lang is the UI language ("zh" default).
+func (a *App) Lang() string { return a.lang }
+
 // Load satisfies kit.ModuleHost.
 func (a *App) Load(markLoading func(), fn func() func()) { a.load(markLoading, fn) }
 
@@ -63,6 +69,6 @@ func (a *App) modulePage(c *ui.Context, mod module) {
 	case "/roles":
 		a.rolesMod.View(h, c)
 	default:
-		ui.Text(c, mod.Label)
+		ui.Text(c, kit.Tr(a.lang, mod.Label))
 	}
 }

@@ -4,12 +4,12 @@ package ui
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
 	"seismic/internal/es"
+	"seismic/internal/ui/kit"
 	"seismic/internal/ui/nodes"
 	"seismic/internal/ui/overview"
 	"seismic/internal/ui/recovery"
@@ -98,14 +98,14 @@ type App struct {
 	settingsMod     *settings.Module
 	usersMod        *users.Module
 	rolesMod        *roles.Module
-	// Lang is "zh" or "en".
-	Lang string
+	// lang is the UI language, "zh" (default) or "en".
+	lang string
 }
 
 // NewApp makes the app state around the given router.
 func NewApp(router *ui.Router) *App {
 	return &App{
-		router: router, Lang: "zh", ClusterHealth: "unknown",
+		router: router, lang: "zh", ClusterHealth: "unknown",
 		overviewMod:     overview.New(),
 		searchMod:       search.New(),
 		restMod:         rest.New(),
@@ -147,6 +147,11 @@ func (a *App) invalidate() {
 // View builds the window: a welcome page until a cluster is connected,
 // then toolbar, sidebar and routed module pages, and the status bar.
 func (a *App) View(c *ui.Context) {
+	// 方向 A「原生工具流」：系统主题 + elasticvue 品牌绿系 teal accent。
+	t := *c.Theme()
+	t.Accent = ui.Hex("#0e8c7f")
+	c.SetTheme(&t)
+
 	if !a.Connected {
 		a.welcome(c)
 		return
@@ -180,11 +185,10 @@ func (a *App) backgroundCtx() context.Context {
 func (a *App) toolbar(c *ui.Context) {
 	ui.Toolbar(c, func() {
 		ui.BackButton(c, a.router)
-		ui.ForwardButton(c, a.router)
 		health := map[string]string{"green": "● ", "yellow": "● ", "red": "● ", "unknown": "○ "}[a.ClusterHealth]
 		name := a.ClusterName
 		if name == "" {
-			name = "未连接"
+			name = kit.Tr(a.lang, "未连接")
 		}
 		ui.MenuButton(c, health+name, func(m *ui.Menu) {
 			if a.deps.Conns != nil {
@@ -197,27 +201,27 @@ func (a *App) toolbar(c *ui.Context) {
 				}
 			}
 			m.Separator()
-			if m.Item("管理连接…").Chosen() {
+			if m.Item(kit.Tr(a.lang, "管理连接…")).Chosen() {
 				a.Connected = false
 			}
-			if m.Item("刷新健康状态").Chosen() {
+			if m.Item(kit.Tr(a.lang, "刷新健康状态")).Chosen() {
 				a.refreshHealth()
 			}
 		})
 		ui.Spacer(c)
 		lang := "中文"
-		if a.Lang != "zh" {
+		if a.lang != "zh" {
 			lang = "English"
 		}
 		ui.MenuButton(c, lang, func(m *ui.Menu) {
-			if m.Item("简体中文").Checked(a.Lang == "zh").Chosen() {
-				a.Lang = "zh"
+			if m.Item("简体中文").Checked(a.lang == "zh").Chosen() {
+				a.lang = "zh"
 			}
-			if m.Item("English").Checked(a.Lang == "en").Chosen() {
-				a.Lang = "en"
+			if m.Item("English").Checked(a.lang == "en").Chosen() {
+				a.lang = "en"
 			}
 		})
-	}).Label("工具栏")
+	}).Label(kit.Tr(a.lang, "工具栏"))
 }
 
 func (a *App) sidebar(c *ui.Context) {
@@ -225,12 +229,12 @@ func (a *App) sidebar(c *ui.Context) {
 	side := ui.Sidebar(c, &page, func() {
 		for _, group := range []string{"cluster", "data", "ops", "security"} {
 			g := group
-			ui.SidebarSection(c, groupTitles[g], nil, func() {
+			ui.SidebarSection(c, kit.Tr(a.lang, groupTitles[g]), nil, func() {
 				for _, mod := range modules {
 					if mod.Group != g {
 						continue
 					}
-					ui.SidebarItem(c, mod.Path, nil, mod.Label)
+					ui.SidebarItem(c, mod.Path, nil, kit.Tr(a.lang, mod.Label))
 				}
 			})
 		}
@@ -246,12 +250,12 @@ func (a *App) sidebar(c *ui.Context) {
 func (a *App) page(c *ui.Context, r *ui.Route) {
 	for _, mod := range modules {
 		if r.Match(mod.Path) {
-			r.Title(mod.Label)
+			r.Title(kit.Tr(a.lang, mod.Label))
 			a.modulePage(c, mod)
 			return
 		}
 	}
-	ui.Text(c, "页面不存在")
+	ui.Text(c, kit.Tr(a.lang, "页面不存在"))
 }
 
 func (a *App) statusbar(c *ui.Context) {
@@ -261,7 +265,7 @@ func (a *App) statusbar(c *ui.Context) {
 		Circle(c, 8, healthColor(c, a.ClusterHealth))
 		ui.Text(c, a.ClusterName).FontSize(12)
 		if a.DocsCount != "" {
-			ui.Text(c, fmt.Sprintf("%s 文档", a.DocsCount)).FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(a.lang, "{0} 文档", a.DocsCount)).FontSize(12).TextColor(t.TextMuted)
 		}
 		if a.ShardsText != "" {
 			ui.Text(c, a.ShardsText).FontSize(12).TextColor(t.TextMuted)
@@ -300,10 +304,10 @@ func (a *App) welcome(c *ui.Context) {
 	ui.Column(c).Fill().Center().Children(func() {
 		ui.Column(c).Gap(6).Center().Children(func() {
 			ui.Text(c, "Seismic").FontSize(30).Bold()
-			ui.Text(c, "macOS 原生 Elasticsearch 客户端").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(a.lang, "macOS 原生 Elasticsearch 客户端")).TextColor(t.TextMuted)
 		})
 		if a.connecting {
-			ui.Text(c, "正在连接…").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(a.lang, "正在连接…")).TextColor(t.TextMuted)
 		}
 		a.connectionsList(c)
 		a.connectFormView(c)
@@ -320,7 +324,7 @@ func (a *App) connectionsList(c *ui.Context) {
 		return
 	}
 	ui.Column(c).Gap(4).Width(360).Children(func() {
-		ui.Text(c, "已保存的连接").FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(a.lang, "已保存的连接")).FontSize(12).TextColor(t.TextMuted)
 		for _, connItem := range list {
 			item := connItem
 			ui.Row(c).Gap(8).AlignItems(ui.Center).Padding(8, 6, 8, 6).
@@ -330,7 +334,7 @@ func (a *App) connectionsList(c *ui.Context) {
 					ui.Text(c, item.Name)
 					ui.Text(c, item.URI).FontSize(11).TextColor(t.TextMuted)
 				})
-				if ui.Button(c, "连接").Clicked() {
+				if ui.Button(c, kit.Tr(a.lang, "连接")).Clicked() {
 					a.deps.Conns.SetActive(item.UUID)
 					a.connectTo(item)
 				}
@@ -344,10 +348,10 @@ func (a *App) connectFormView(c *ui.Context) {
 	f := &a.connect
 	ui.Column(c).Gap(8).Width(360).Padding(16).Radius(10).
 		Background(t.Surface).Border(1, t.Border).Children(func() {
-		ui.Text(c, "添加连接").Bold()
-		ui.TextInput(c, &f.Name).Placeholder("名称（可选）").Label("名称")
+		ui.Text(c, kit.Tr(a.lang, "添加连接")).Bold()
+		ui.TextInput(c, &f.Name).Placeholder(kit.Tr(a.lang, "名称（可选）")).Label(kit.Tr(a.lang, "名称"))
 		ui.TextInput(c, &f.URI).Placeholder("http://localhost:9200").Label("URI")
-		ui.MenuButton(c, authLabel(f.AuthType), func(m *ui.Menu) {
+		ui.MenuButton(c, authLabel(f.AuthType, a.lang), func(m *ui.Menu) {
 			for _, ch := range authChoices {
 				choice := ch
 				if m.Item(choice.label).Checked(f.AuthType == string(choice.value)).Chosen() {
@@ -357,26 +361,26 @@ func (a *App) connectFormView(c *ui.Context) {
 		})
 		switch es.AuthType(f.AuthType) {
 		case es.AuthBasic:
-			ui.TextInput(c, &f.Username).Placeholder("elastic").Label("用户名")
-			ui.TextInput(c, &f.Password).Placeholder("••••••").Label("密码")
+			ui.TextInput(c, &f.Username).Placeholder("elastic").Label(kit.Tr(a.lang, "用户名"))
+			ui.TextInput(c, &f.Password).Placeholder("••••••").Label(kit.Tr(a.lang, "密码"))
 		case es.AuthAPIKey:
 			ui.TextInput(c, &f.APIKey).Placeholder("API Key").Label("API Key")
 		case es.AuthAWSIAM:
 			ui.TextInput(c, &f.AccessKeyID).Label("Access Key ID")
 			ui.TextInput(c, &f.SecretAccessKey).Label("Secret Access Key")
-			ui.TextInput(c, &f.SessionToken).Placeholder("可选").Label("Session Token")
+			ui.TextInput(c, &f.SessionToken).Placeholder(kit.Tr(a.lang, "可选")).Label("Session Token")
 			ui.TextInput(c, &f.Region).Placeholder("us-east-1").Label("Region")
 		}
 		ui.Row(c).Gap(8).Children(func() {
-			if ui.Button(c, "测试连接").Disabled(f.testing || f.URI == "").Clicked() {
+			if ui.Button(c, kit.Tr(a.lang, "测试连接")).Disabled(f.testing || f.URI == "").Clicked() {
 				a.testConnection()
 			}
-			if ui.PrimaryButton(c, "保存并连接").Disabled(f.URI == "").Clicked() {
+			if ui.PrimaryButton(c, kit.Tr(a.lang, "保存并连接")).Disabled(f.URI == "").Clicked() {
 				a.saveConnection()
 			}
 		})
 		if f.testing {
-			ui.Text(c, "测试中…").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(a.lang, "测试中…")).TextColor(t.TextMuted)
 		}
 		if f.tested {
 			color := t.TextMuted

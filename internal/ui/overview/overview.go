@@ -132,24 +132,24 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	ui.Column(c).Fill().Children(func() {
 		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, "概览").FontSize(19).Bold()
-				ui.Text(c, "集群状态一览").FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "概览")).FontSize(19).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "集群状态一览")).FontSize(12).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
-			if ui.Button(c, "刷新").Clicked() {
+			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {
 				m.load(h)
 			}
 		})
 
-		if kit.StateText(c, m.loading, m.err, false, "") {
+		if kit.StateText(c, h.Lang(), m.loading, m.err, false, "") {
 			return
 		}
 
 		ui.Row(c).Grow(1).Padding(0, 16, 16, 16).Gap(12).Children(func() {
 			m.clusterCard(c, h)
-			m.healthCard(c)
-			m.statusCard(c)
-			m.dataCard(c)
+			m.healthCard(c, h.Lang())
+			m.statusCard(c, h.Lang())
+			m.dataCard(c, h.Lang())
 		})
 	})
 }
@@ -165,8 +165,8 @@ func (m *Module) clusterCard(c *ui.Context, h kit.ModuleHost) {
 		distribution = h.Distribution()
 	}
 	ui.Column(c).Grow(1).Background(t.Surface).Radius(8).Padding(16).Gap(8).Children(func() {
-		ui.Text(c, "集群").FontSize(12).TextColor(t.TextMuted)
-		ui.Text(c, orDefault(m.info.ClusterName, "未知集群")).FontSize(17).Bold()
+		ui.Text(c, kit.Tr(h.Lang(), "集群")).FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(h.Lang(), orDefault(m.info.ClusterName, "未知集群"))).FontSize(17).Bold()
 		ui.Text(c, m.info.ClusterUUID).FontSize(11).TextColor(t.TextMuted)
 		ui.Text(c, version).FontSize(12)
 		if distribution != "" {
@@ -175,47 +175,47 @@ func (m *Module) clusterCard(c *ui.Context, h kit.ModuleHost) {
 	})
 }
 
-func (m *Module) healthCard(c *ui.Context) {
+func (m *Module) healthCard(c *ui.Context, lang string) {
 	t := c.Theme()
 	status := orDefault(m.health.Status, m.stats.Status)
 	ui.Column(c).Grow(1).Background(t.Surface).Radius(8).Padding(16).Gap(8).Children(func() {
-		ui.Text(c, "健康").FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(lang, "健康")).FontSize(12).TextColor(t.TextMuted)
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
 			kit.Dot(c, 16, kit.HealthColor(c, status))
-			ui.Text(c, orDefault(status, "未知")).FontSize(26).Bold().TextColor(kit.HealthColor(c, status))
+			ui.Text(c, kit.Tr(lang, orDefault(status, "未知"))).FontSize(26).Bold().TextColor(kit.HealthColor(c, status))
 		})
-		ui.Text(c, "活动分片 "+fmtInt(m.health.ActiveShards)).FontSize(12).TextColor(t.TextMuted)
-		ui.Text(c, "未分配分片 "+fmtInt(m.health.UnassignedShards)).FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(lang, "活动分片 {0}", fmtInt(m.health.ActiveShards))).FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(lang, "未分配分片 {0}", fmtInt(m.health.UnassignedShards))).FontSize(12).TextColor(t.TextMuted)
 	})
 }
 
-func (m *Module) statusCard(c *ui.Context) {
+func (m *Module) statusCard(c *ui.Context, lang string) {
 	t := c.Theme()
 	nodes := m.stats.Nodes.Count.Total
 	if nodes == 0 {
 		nodes = m.health.NumberOfNodes
 	}
 	ui.Column(c).Grow(1).Background(t.Surface).Radius(8).Padding(16).Gap(8).Children(func() {
-		ui.Text(c, "状态").FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(lang, "状态")).FontSize(12).TextColor(t.TextMuted)
 		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, fmtInt(nodes)).FontSize(26).Bold()
-			ui.Text(c, "节点").FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(lang, "节点")).FontSize(12).TextColor(t.TextMuted)
 		})
 		ui.Text(c, fmtInt(m.stats.Nodes.Count.Master)+" master · "+fmtInt(m.stats.Nodes.Count.Data)+" data").FontSize(12).TextColor(t.TextMuted)
-		ui.Text(c, fmtInt(m.stats.Indices.Shards.Primaries)+" 主分片 · "+fmtInt(m.stats.Indices.Shards.Total-m.stats.Indices.Shards.Primaries)+" 副本").FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(lang, "{0} 主分片 · {1} 副本", fmtInt(m.stats.Indices.Shards.Primaries), fmtInt(m.stats.Indices.Shards.Total-m.stats.Indices.Shards.Primaries))).FontSize(12).TextColor(t.TextMuted)
 	})
 }
 
-func (m *Module) dataCard(c *ui.Context) {
+func (m *Module) dataCard(c *ui.Context, lang string) {
 	t := c.Theme()
 	ui.Column(c).Grow(1).Background(t.Surface).Radius(8).Padding(16).Gap(8).Children(func() {
-		ui.Text(c, "数据").FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(lang, "数据")).FontSize(12).TextColor(t.TextMuted)
 		ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, fmtInt(m.stats.Indices.Docs.Count)).FontSize(26).Bold()
-			ui.Text(c, "文档").FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(lang, "文档")).FontSize(12).TextColor(t.TextMuted)
 		})
-		ui.Text(c, humanBytes(m.stats.Indices.Store.SizeInBytes)+" 磁盘占用").FontSize(12).TextColor(t.TextMuted)
-		ui.Text(c, fmtInt(m.stats.Indices.Count)+" 个索引").FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(lang, "{0} 磁盘占用", humanBytes(m.stats.Indices.Store.SizeInBytes))).FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(lang, "{0} 个索引", fmtInt(m.stats.Indices.Count))).FontSize(12).TextColor(t.TextMuted)
 	})
 }
 

@@ -15,6 +15,7 @@ import (
 // fakeHost is a synchronous ModuleHost over an httptest ES.
 type fakeHost struct {
 	client *es.Client
+	lang   string
 }
 
 func (f *fakeHost) ES() *es.Client       { return f.client }
@@ -23,6 +24,7 @@ func (f *fakeHost) Version() string      { return "8.14.1" }
 func (f *fakeHost) Distribution() string { return "elasticsearch" }
 func (f *fakeHost) BuildFlavor() string  { return "" }
 func (f *fakeHost) DB() *db.Store        { return nil }
+func (f *fakeHost) Lang() string         { return f.lang }
 func (f *fakeHost) Load(mark func(), fn func() func()) {
 	mark()
 	apply := fn()
@@ -69,6 +71,24 @@ func TestRecoveryView(t *testing.T) {
 	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 900, 600)
 
 	for _, want := range []string{"logs-2024", "metrics", "DONE", "TRANSLOG", "snapshot", "repo/snap-1", "node-a", "2 条恢复记录"} {
+		if !tt.HasText(want) {
+			t.Errorf("missing text %q; texts %q", want, tt.Texts())
+		}
+	}
+}
+
+func TestRecoveryEnglishUI(t *testing.T) {
+	srv := newRecoveryServer(t)
+	defer srv.Close()
+
+	client, err := es.New(srv.URL+"/", es.Auth{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	host := &fakeHost{client: client, lang: "en"}
+	m := New()
+	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 900, 600)
+	for _, want := range []string{"Shard Recovery", "2 recoveries", "Stage", "Source", "Started"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing text %q; texts %q", want, tt.Texts())
 		}

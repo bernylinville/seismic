@@ -21,6 +21,7 @@ type fakeHost struct {
 	client       *es.Client
 	version      string
 	distribution string
+	lang         string
 }
 
 func (f *fakeHost) ES() *es.Client       { return f.client }
@@ -29,6 +30,7 @@ func (f *fakeHost) Version() string      { return f.version }
 func (f *fakeHost) Distribution() string { return f.distribution }
 func (f *fakeHost) BuildFlavor() string  { return "" }
 func (f *fakeHost) DB() *db.Store        { return nil }
+func (f *fakeHost) Lang() string         { return f.lang }
 func (f *fakeHost) Load(mark func(), fn func() func()) {
 	mark()
 	fn()()
@@ -92,6 +94,25 @@ func newHarness(t *testing.T, version, distribution string) (*Module, *fakeES, *
 	m := New()
 	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 960, 640)
 	return m, fake, tt
+}
+
+func TestRolesEnglishUI(t *testing.T) {
+	fake := &fakeES{roles: testRoles}
+	srv := httptest.NewServer(http.HandlerFunc(fake.handler))
+	t.Cleanup(srv.Close)
+	client, err := es.New(srv.URL, es.Auth{Type: es.AuthNone})
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.Version = "8.14.1"
+	host := &fakeHost{client: client, version: "8.14.1", distribution: "elasticsearch", lang: "en"}
+	m := New()
+	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 960, 640)
+	for _, want := range []string{"Roles", "3 roles", "Name", "Index privileges", "Cluster privileges"} {
+		if !tt.HasText(want) {
+			t.Errorf("missing text %q; texts: %q", want, tt.Texts())
+		}
+	}
 }
 
 func (f *fakeES) find(t *testing.T, method, path string) request {

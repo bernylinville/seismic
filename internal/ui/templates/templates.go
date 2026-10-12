@@ -57,10 +57,12 @@ type templateRow struct {
 	patterns string
 }
 
-var templateCols = []ui.TableColumn{
-	{Title: "名称", Sortable: true},
-	{Title: "顺序", Width: 90, Align: ui.End, Sortable: true},
-	{Title: "索引模式", Width: 260},
+func templateCols(lang string) []ui.TableColumn {
+	return []ui.TableColumn{
+		{Title: kit.Tr(lang, "名称"), Sortable: true},
+		{Title: kit.Tr(lang, "顺序"), Width: 90, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "索引模式"), Width: 260},
+	}
 }
 
 // View builds the page; h is the app host.
@@ -69,8 +71,8 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	if client == nil {
 		t := c.Theme()
 		ui.Column(c).Fill().Padding(16).Children(func() {
-			ui.Text(c, "索引模板").FontSize(20).Bold()
-			ui.Text(c, "未连接集群").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "索引模板")).FontSize(20).Bold()
+			ui.Text(c, kit.Tr(h.Lang(), "未连接集群")).TextColor(t.TextMuted)
 		})
 		return
 	}
@@ -82,22 +84,22 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	ui.Column(c).Fill().Children(func() {
 		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, "索引模板").FontSize(19).Bold()
-				ui.Text(c, fmt.Sprintf("%d 个模板", len(m.visibleRows()))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "索引模板")).FontSize(19).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 个模板", len(m.visibleRows()))).FontSize(12).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
-			ui.SearchField(c, &m.filter).Placeholder("筛选模板…").Width(200)
-			if ui.Button(c, "刷新").Clicked() {
+			ui.SearchField(c, &m.filter).Placeholder(kit.Tr(h.Lang(), "筛选模板…")).Width(200)
+			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {
 				m.load(h)
 			}
-			if ui.Button(c, "新建…").Clicked() {
+			if ui.Button(c, kit.Tr(h.Lang(), "新建…")).Clicked() {
 				m.creating, m.createName, m.createPats, m.createBody, m.createErr = true, "", "", "{\n  \n}", ""
 			}
 			if m.selectedRow >= 0 && m.selectedRow < len(m.visibleRows()) {
-				if ui.Button(c, "查看 JSON").Clicked() {
+				if ui.Button(c, kit.Tr(h.Lang(), "查看 JSON")).Clicked() {
 					m.showDetail(h, m.visibleRows()[m.selectedRow])
 				}
-				if ui.Button(c, "删除…").Clicked() {
+				if ui.Button(c, kit.Tr(h.Lang(), "删除…")).Clicked() {
 					m.deleteName = m.visibleRows()[m.selectedRow].name
 					m.deleting = true
 				}
@@ -105,12 +107,12 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		})
 
 		if m.composable {
-			ui.Tabs(c, &m.tab, "旧版模板", "组合模板").Padding(0, 20, 0, 8)
+			ui.Tabs(c, &m.tab, kit.Tr(h.Lang(), "旧版模板"), kit.Tr(h.Lang(), "组合模板")).Padding(0, 20, 0, 8)
 		}
 		if m.actionErr != "" {
 			ui.Text(c, m.actionErr).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 20, 4, 20)
 		}
-		if kit.StateText(c, m.loading, m.err, len(m.rows()) == 0, "没有模板") {
+		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows()) == 0, kit.Tr(h.Lang(), "没有模板")) {
 			return
 		}
 
@@ -119,7 +121,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			m.selectedRow = -1
 		}
 		state := ui.ListState{Selected: &m.selectedRow}
-		table := ui.Table(c, &state, templateCols, len(rows), func(row, col int) {
+		table := ui.Table(c, &state, templateCols(h.Lang()), len(rows), func(row, col int) {
 			r := rows[row]
 			switch col {
 			case 0:
@@ -135,7 +137,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		}
 
 		if m.detailName != "" {
-			m.detailView(c)
+			m.detailView(c, h.Lang())
 		}
 	})
 
@@ -161,20 +163,20 @@ func (m *Module) visibleRows() []templateRow {
 	return out
 }
 
-func (m *Module) detailView(c *ui.Context) {
+func (m *Module) detailView(c *ui.Context, lang string) {
 	t := c.Theme()
 	ui.Column(c).Height(220).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
 		Background(t.Surface).Padding(12, 16, 12, 16).Gap(6).Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, m.detailName).Bold()
-			ui.Text(c, "· 定义 JSON").TextColor(t.TextMuted).FontSize(12)
+			ui.Text(c, kit.Tr(lang, "· 定义 JSON")).TextColor(t.TextMuted).FontSize(12)
 			ui.Spacer(c)
-			if ui.Button(c, "关闭").Clicked() {
+			if ui.Button(c, kit.Tr(lang, "关闭")).Clicked() {
 				m.detailName, m.detail = "", nil
 			}
 		})
 		if m.detailLoading {
-			ui.Text(c, "加载中…").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(lang, "加载中…")).TextColor(t.TextMuted)
 			return
 		}
 		if len(m.detail) > 0 {
@@ -191,13 +193,13 @@ func (m *Module) deleteDialog(h kit.ModuleHost, c *ui.Context) {
 	}
 	t := c.Theme()
 	ui.Modal(c, &m.deleting, func() {
-		ui.Text(c, "删除模板").Bold()
-		ui.Text(c, "确定删除模板 "+m.deleteName+" 吗？此操作不可撤销。").TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(h.Lang(), "删除模板")).Bold()
+		ui.Text(c, kit.Tr(h.Lang(), "确定删除模板 {0} 吗？此操作不可撤销。", m.deleteName)).TextColor(t.TextMuted)
 		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
-			if ui.Button(c, "取消").Clicked() {
+			if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 				m.deleting = false
 			}
-			if ui.Button(c, "删除").Clicked() {
+			if ui.Button(c, kit.Tr(h.Lang(), "删除")).Clicked() {
 				name := m.deleteName
 				m.deleting = false
 				m.run(h, "删除", func(ctx context.Context, client *es.Client) error {
@@ -214,19 +216,19 @@ func (m *Module) createDialog(h kit.ModuleHost, c *ui.Context) {
 		return
 	}
 	ui.Modal(c, &m.creating, func() {
-		ui.Text(c, "新建模板").Bold()
+		ui.Text(c, kit.Tr(h.Lang(), "新建模板")).Bold()
 		ui.Column(c).Gap(8).Children(func() {
-			ui.TextInput(c, &m.createName).Label("名称")
-			ui.TextInput(c, &m.createPats).Label("索引模式（逗号分隔）")
-			ui.TextArea(c, &m.createBody).Label("JSON 主体").Lines(3, 10)
+			ui.TextInput(c, &m.createName).Label(kit.Tr(h.Lang(), "名称"))
+			ui.TextInput(c, &m.createPats).Label(kit.Tr(h.Lang(), "索引模式（逗号分隔）"))
+			ui.TextArea(c, &m.createBody).Label(kit.Tr(h.Lang(), "JSON 主体")).Lines(3, 10)
 			if m.createErr != "" {
 				ui.Text(c, m.createErr).FontSize(12).TextColor(ui.Hex("#d64545"))
 			}
 			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
-				if ui.Button(c, "取消").Clicked() {
+				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.creating = false
 				}
-				if ui.PrimaryButton(c, "创建").Clicked() {
+				if ui.PrimaryButton(c, kit.Tr(h.Lang(), "创建")).Clicked() {
 					m.create(h)
 				}
 			})
@@ -245,12 +247,12 @@ func (m *Module) endpoint(h kit.ModuleHost) string {
 // create validates the dialog's fields and PUTs the new template.
 func (m *Module) create(h kit.ModuleHost) {
 	if strings.TrimSpace(m.createName) == "" || strings.TrimSpace(m.createPats) == "" {
-		m.createErr = "名称和索引模式不能为空"
+		m.createErr = kit.Tr(h.Lang(), "名称和索引模式不能为空")
 		return
 	}
 	var body map[string]any
 	if err := json.Unmarshal([]byte(m.createBody), &body); err != nil {
-		m.createErr = "JSON 主体无效: " + err.Error()
+		m.createErr = kit.Tr(h.Lang(), "JSON 主体无效: {0}", err.Error())
 		return
 	}
 	patterns := []string{}
@@ -320,7 +322,7 @@ func (m *Module) run(h kit.ModuleHost, name string, fn func(ctx context.Context,
 			err := fn(context.Background(), client)
 			return func() {
 				if err != nil {
-					m.actionErr = name + "失败: " + kit.ErrMessage(err)
+					m.actionErr = kit.Tr(h.Lang(), "{0}失败: {1}", kit.Tr(h.Lang(), name), kit.ErrMessage(err))
 				}
 				m.load(h)
 			}

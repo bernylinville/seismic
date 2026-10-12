@@ -44,10 +44,12 @@ type settingRow struct {
 	value   string
 }
 
-var settingsCols = []ui.TableColumn{
-	{Title: "区块", Width: 110},
-	{Title: "键", Sortable: true},
-	{Title: "值"},
+func settingsCols(lang string) []ui.TableColumn {
+	return []ui.TableColumn{
+		{Title: kit.Tr(lang, "区块"), Width: 110},
+		{Title: kit.Tr(lang, "键"), Sortable: true},
+		{Title: kit.Tr(lang, "值")},
+	}
 }
 
 // View builds the page; h is the app host.
@@ -56,8 +58,8 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	if client == nil {
 		t := c.Theme()
 		ui.Column(c).Fill().Padding(16).Children(func() {
-			ui.Text(c, "集群设置").FontSize(20).Bold()
-			ui.Text(c, "未连接集群").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "集群设置")).FontSize(20).Bold()
+			ui.Text(c, kit.Tr(h.Lang(), "未连接集群")).TextColor(t.TextMuted)
 		})
 		return
 	}
@@ -69,15 +71,15 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	ui.Column(c).Fill().Children(func() {
 		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, "集群设置").FontSize(19).Bold()
-				ui.Text(c, fmt.Sprintf("%d 项设置", len(m.rows))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "集群设置")).FontSize(19).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 项设置", len(m.rows))).FontSize(12).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
-			if ui.Button(c, "刷新").Clicked() {
+			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {
 				m.load(h)
 			}
 			if m.selectedRow >= 0 && m.selectedRow < len(m.rows) {
-				if ui.Button(c, "编辑…").Clicked() {
+				if ui.Button(c, kit.Tr(h.Lang(), "编辑…")).Clicked() {
 					r := m.rows[m.selectedRow]
 					m.editing, m.confirming = true, false
 					m.editKey = r.key
@@ -91,7 +93,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		if m.actionErr != "" {
 			ui.Text(c, m.actionErr).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 20, 4, 20)
 		}
-		if kit.StateText(c, m.loading, m.err, len(m.rows) == 0, "没有集群设置") {
+		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "没有集群设置")) {
 			return
 		}
 
@@ -99,7 +101,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			m.selectedRow = -1
 		}
 		state := ui.ListState{Selected: &m.selectedRow}
-		table := ui.Table(c, &state, settingsCols, len(m.rows), func(row, col int) {
+		table := ui.Table(c, &state, settingsCols(h.Lang()), len(m.rows), func(row, col int) {
 			r := m.rows[row]
 			switch col {
 			case 0:
@@ -137,20 +139,20 @@ func (m *Module) editDialog(h kit.ModuleHost, c *ui.Context) {
 	}
 	t := c.Theme()
 	ui.Modal(c, &m.editing, func() {
-		ui.Text(c, "修改集群设置").Bold()
+		ui.Text(c, kit.Tr(h.Lang(), "修改集群设置")).Bold()
 		if !m.confirming {
 			ui.Column(c).Gap(8).Children(func() {
 				ui.Row(c).Gap(8).Children(func() {
 					ui.Text(c, m.editKey).Bold()
-					ui.Text(c, "当前值: "+m.editOld).FontSize(12).TextColor(t.TextMuted)
+					ui.Text(c, kit.Tr(h.Lang(), "当前值: {0}", m.editOld)).FontSize(12).TextColor(t.TextMuted)
 				})
-				ui.TextArea(c, &m.editValue).Label("新值（JSON 或纯文本）").Lines(2, 8)
-				ui.Checkbox(c, &m.transient, "写入 transient（重启后失效）")
+				ui.TextArea(c, &m.editValue).Label(kit.Tr(h.Lang(), "新值（JSON 或纯文本）")).Lines(2, 8)
+				ui.Checkbox(c, &m.transient, kit.Tr(h.Lang(), "写入 transient（重启后失效）"))
 				ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
-					if ui.Button(c, "取消").Clicked() {
+					if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 						m.editing = false
 					}
-					if ui.Button(c, "应用…").Clicked() {
+					if ui.Button(c, kit.Tr(h.Lang(), "应用…")).Clicked() {
 						m.confirming = true
 					}
 				})
@@ -159,14 +161,14 @@ func (m *Module) editDialog(h kit.ModuleHost, c *ui.Context) {
 		}
 		// 二次确认：改集群设置是危险操作。
 		ui.Column(c).Gap(8).Children(func() {
-			ui.Text(c, "将把 "+sectionName(m.transient)+" 设置 "+m.editKey+" 改为 "+m.editValue).TextColor(t.TextMuted)
-			ui.Text(c, "集群设置变更会影响整个集群，确定继续吗？").
+			ui.Text(c, kit.Tr(h.Lang(), "将把 {0} 设置 {1} 改为 {2}", sectionName(m.transient), m.editKey, m.editValue)).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "集群设置变更会影响整个集群，确定继续吗？")).
 				FontSize(12).TextColor(ui.Hex("#d64545"))
 			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
-				if ui.Button(c, "返回").Clicked() {
+				if ui.Button(c, kit.Tr(h.Lang(), "返回")).Clicked() {
 					m.confirming = false
 				}
-				if ui.Button(c, "确认修改").Clicked() {
+				if ui.Button(c, kit.Tr(h.Lang(), "确认修改")).Clicked() {
 					key, value, transient := m.editKey, m.editValue, m.transient
 					m.editing = false
 					m.apply(h, key, value, transient)
@@ -191,7 +193,7 @@ func (m *Module) apply(h kit.ModuleHost, key, value string, transient bool) {
 	}
 	parsed, ok := parseValue(value)
 	if !ok {
-		m.actionErr = "新值不是合法 JSON"
+		m.actionErr = kit.Tr(h.Lang(), "新值不是合法 JSON")
 		return
 	}
 	section := "persistent"
@@ -205,7 +207,7 @@ func (m *Module) apply(h kit.ModuleHost, key, value string, transient bool) {
 			_, err := client.ClusterPutSettings(context.Background(), body)
 			return func() {
 				if err != nil {
-					m.actionErr = "修改失败: " + kit.ErrMessage(err)
+					m.actionErr = kit.Tr(h.Lang(), "修改失败: {0}", kit.ErrMessage(err))
 				}
 				m.load(h)
 			}

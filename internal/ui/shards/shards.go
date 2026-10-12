@@ -179,7 +179,7 @@ func (m *Module) reroute(h kit.ModuleHost, shard Row, targetNode string) {
 			_, err := client.ClusterReroute(context.Background(), []any{cmd})
 			return func() {
 				if err != nil {
-					m.actionErr = "重新分配失败: " + kit.ErrMessage(err)
+					m.actionErr = kit.Tr(h.Lang(), "重新分配失败: {0}", kit.ErrMessage(err))
 					return
 				}
 				m.rerouting = nil
@@ -189,15 +189,17 @@ func (m *Module) reroute(h kit.ModuleHost, shard Row, targetNode string) {
 	)
 }
 
-var cols = []ui.TableColumn{
-	{Title: "索引", Sortable: true},
-	{Title: "分片", Width: 60, Align: ui.End},
-	{Title: "类型", Width: 70, Sortable: true},
-	{Title: "状态", Width: 130, Sortable: true},
-	{Title: "文档数", Width: 100, Align: ui.End, Sortable: true},
-	{Title: "大小", Width: 90, Align: ui.End, Sortable: true},
-	{Title: "节点", Sortable: true},
-	{Title: "未分配原因", Width: 150},
+func cols(lang string) []ui.TableColumn {
+	return []ui.TableColumn{
+		{Title: kit.Tr(lang, "索引"), Sortable: true},
+		{Title: kit.Tr(lang, "分片"), Width: 60, Align: ui.End},
+		{Title: kit.Tr(lang, "类型"), Width: 70, Sortable: true},
+		{Title: kit.Tr(lang, "状态"), Width: 130, Sortable: true},
+		{Title: kit.Tr(lang, "文档数"), Width: 100, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "大小"), Width: 90, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "节点"), Sortable: true},
+		{Title: kit.Tr(lang, "未分配原因"), Width: 150},
+	}
 }
 
 // View builds the page; h is the app host.
@@ -210,12 +212,12 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	ui.Column(c).Fill().Children(func() {
 		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, "分片").FontSize(19).Bold()
-				ui.Text(c, itoa(len(m.visibleRows()))+" 个分片").FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "分片")).FontSize(19).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 个分片", itoa(len(m.visibleRows())))).FontSize(12).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
-			ui.SearchField(c, &m.filter).Label("筛选索引…").Placeholder("筛选索引…").Width(220)
-			if ui.Button(c, "刷新").Clicked() {
+			ui.SearchField(c, &m.filter).Label(kit.Tr(h.Lang(), "筛选索引…")).Placeholder(kit.Tr(h.Lang(), "筛选索引…")).Width(220)
+			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {
 				m.load(h)
 			}
 		})
@@ -228,7 +230,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			m.rerouteBar(h, c)
 		}
 
-		if kit.StateText(c, m.loading && len(m.rows) == 0, m.err, len(m.visibleRows()) == 0, "没有分片") {
+		if kit.StateText(c, h.Lang(), m.loading && len(m.rows) == 0, m.err, len(m.visibleRows()) == 0, kit.Tr(h.Lang(), "没有分片")) {
 			return
 		}
 
@@ -237,17 +239,17 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			m.selectedRow = -1
 		}
 		listState := ui.ListState{Selected: &m.selectedRow, Sort: &m.sort}
-		ui.Table(c, &listState, cols, len(rows), func(row, col int) {
+		ui.Table(c, &listState, cols(h.Lang()), len(rows), func(row, col int) {
 			r := rows[row]
 			switch col {
 			case 0:
 				ui.Text(c, r.Index).SingleLine().ContextMenu(func(menu *ui.Menu) {
 					if r.Node != "" {
-						if menu.Item("重新分配…").Chosen() {
+						if menu.Item(kit.Tr(h.Lang(), "重新分配…")).Chosen() {
 							m.rerouting = &r
 						}
 					} else {
-						if menu.Item("分配到节点…").Chosen() {
+						if menu.Item(kit.Tr(h.Lang(), "分配到节点…")).Chosen() {
 							m.rerouting = &r
 						}
 					}
@@ -255,7 +257,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			case 1:
 				ui.Text(c, r.Shard.String()).FontSize(12)
 			case 2:
-				ui.Text(c, prirepLabel(r.Prirep)).FontSize(12)
+				ui.Text(c, kit.Tr(h.Lang(), prirepLabel(r.Prirep))).FontSize(12)
 			case 3:
 				ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
 					kit.Dot(c, 7, stateColor(r.State))
@@ -280,9 +282,9 @@ func (m *Module) rerouteBar(h kit.ModuleHost, c *ui.Context) {
 	shard := m.rerouting
 	ui.Row(c).Padding(8, 20).Gap(8).AlignItems(ui.Center).Children(func() {
 		if shard.Node != "" {
-			ui.Text(c, "重新分配 "+shard.Index+"["+shard.Shard.String()+"]（当前 "+shard.Node+"）到：").FontSize(12)
+			ui.Text(c, kit.Tr(h.Lang(), "重新分配 {0}[{1}]（当前 {2}）到：", shard.Index, shard.Shard.String(), shard.Node)).FontSize(12)
 		} else {
-			ui.Text(c, "分配 "+shard.Index+"["+shard.Shard.String()+"] 到：").FontSize(12)
+			ui.Text(c, kit.Tr(h.Lang(), "分配 {0}[{1}] 到：", shard.Index, shard.Shard.String())).FontSize(12)
 		}
 		for _, node := range m.nodes() {
 			if node == shard.Node {
@@ -294,7 +296,7 @@ func (m *Module) rerouteBar(h kit.ModuleHost, c *ui.Context) {
 			}
 		}
 		ui.Spacer(c)
-		if ui.Button(c, "取消").Clicked() {
+		if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 			m.rerouting = nil
 		}
 	}).BorderWidth(0, 0, 1, 0).BorderColor(t.Border)

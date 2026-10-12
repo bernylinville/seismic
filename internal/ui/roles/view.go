@@ -1,7 +1,6 @@
 package roles
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/egoist/mygo/ui"
@@ -15,7 +14,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	m.buildDialogs(h, c)
 
 	if !es.SupportsNativeSecurityAPI(h.Version(), h.Distribution()) {
-		unsupportedNotice(c)
+		unsupportedNotice(c, h.Lang())
 		return
 	}
 	if !m.loadedOnce && !m.loading && h.ES() != nil {
@@ -27,15 +26,15 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	ui.Column(c).Fill().Children(func() {
 		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, "角色").FontSize(19).Bold()
-				ui.Text(c, fmt.Sprintf("%d 个角色", len(m.rows))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "角色")).FontSize(19).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 个角色", len(m.rows))).FontSize(12).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
-			ui.SearchField(c, &m.filter).Placeholder("筛选角色…").Width(200)
-			if ui.Button(c, "刷新").Clicked() {
+			ui.SearchField(c, &m.filter).Placeholder(kit.Tr(h.Lang(), "筛选角色…")).Width(200)
+			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {
 				m.load(h)
 			}
-			if ui.PrimaryButton(c, "新建角色").Clicked() {
+			if ui.PrimaryButton(c, kit.Tr(h.Lang(), "新建角色")).Clicked() {
 				m.form = roleForm{IndicesJSON: defaultIndicesJSON}
 				m.dialog, m.dialogOpen, m.submitTried = dialogNew, true, false
 			}
@@ -48,7 +47,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			}
 			ui.Text(c, m.actionMsg).FontSize(12).TextColor(color).Padding(0, 20, 4, 20)
 		}
-		if kit.StateText(c, m.loading, m.err, len(m.rows) == 0, "没有角色") {
+		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "没有角色")) {
 			return
 		}
 
@@ -57,29 +56,29 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			m.selected = -1
 		}
 
-		cols := []ui.TableColumn{{Title: "名称", Sortable: true}}
+		cols := []ui.TableColumn{{Title: kit.Tr(h.Lang(), "名称"), Sortable: true}}
 		kinds := []cellCol{colName}
 		if showDescription {
-			cols = append(cols, ui.TableColumn{Title: "描述"})
+			cols = append(cols, ui.TableColumn{Title: kit.Tr(h.Lang(), "描述")})
 			kinds = append(kinds, colDescription)
 		}
 		cols = append(cols,
-			ui.TableColumn{Title: "索引权限"},
-			ui.TableColumn{Title: "集群权限"},
-			ui.TableColumn{Title: "保留", Width: 56},
+			ui.TableColumn{Title: kit.Tr(h.Lang(), "索引权限")},
+			ui.TableColumn{Title: kit.Tr(h.Lang(), "集群权限")},
+			ui.TableColumn{Title: kit.Tr(h.Lang(), "保留"), Width: 56},
 		)
 		kinds = append(kinds, colIndices, colCluster, colReserved)
 
 		state := ui.ListState{Selected: &m.selected, Sort: &m.sort}
 		table := ui.Table(c, &state, cols, len(rows), func(row, col int) {
-			roleCell(c, m, rows[row], kinds[col])
+			roleCell(c, m, rows[row], kinds[col], h.Lang())
 		}).Grow(1).Padding(0, 12, 0, 12)
 		if table.Submitted() && m.selected >= 0 && m.selected < len(rows) {
 			m.detailName = rows[m.selected].Name
 		}
 
 		if m.detailName != "" {
-			m.detailView(c, rows)
+			m.detailView(c, rows, h.Lang())
 		}
 	})
 }
@@ -95,21 +94,21 @@ const (
 	colReserved
 )
 
-func roleCell(c *ui.Context, m *Module, r roleRow, col cellCol) {
+func roleCell(c *ui.Context, m *Module, r roleRow, col cellCol, lang string) {
 	t := c.Theme()
 	switch col {
 	case colName:
 		ui.Text(c, r.Name).SingleLine().ContextMenu(func(menu *ui.Menu) {
-			if menu.Item("查看 JSON").Chosen() {
+			if menu.Item(kit.Tr(lang, "查看 JSON")).Chosen() {
 				m.detailName = r.Name
 			}
 			menu.Separator()
 			if !r.Reserved {
-				if menu.Item("编辑…").Chosen() {
+				if menu.Item(kit.Tr(lang, "编辑…")).Chosen() {
 					m.form = roleFormFromRow(r)
 					m.dialog, m.dialogOpen, m.submitTried = dialogEdit, true, false
 				}
-				if menu.Item("删除…").Chosen() {
+				if menu.Item(kit.Tr(lang, "删除…")).Chosen() {
 					m.confirmName, m.confirmOpen = r.Name, true
 				}
 			}
@@ -122,21 +121,21 @@ func roleCell(c *ui.Context, m *Module, r roleRow, col cellCol) {
 		ui.Text(c, strings.Join(r.Cluster, ", ")).FontSize(12).SingleLine()
 	case colReserved:
 		if r.Reserved {
-			ui.Text(c, "是").FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(lang, "是")).FontSize(12).TextColor(t.TextMuted)
 		}
 	}
 }
 
 // detailView shows the chosen role's raw JSON below the table.
-func (m *Module) detailView(c *ui.Context, rows []roleRow) {
+func (m *Module) detailView(c *ui.Context, rows []roleRow, lang string) {
 	t := c.Theme()
 	ui.Column(c).Height(220).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
 		Background(t.Surface).Padding(12, 16, 12, 16).Gap(6).Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, m.detailName).Bold()
-			ui.Text(c, "· JSON").TextColor(t.TextMuted).FontSize(12)
+			ui.Text(c, kit.Tr(lang, "· JSON")).TextColor(t.TextMuted).FontSize(12)
 			ui.Spacer(c)
-			if ui.Button(c, "关闭").Clicked() {
+			if ui.Button(c, kit.Tr(lang, "关闭")).Clicked() {
 				m.detailName = ""
 			}
 		})
@@ -150,11 +149,11 @@ func (m *Module) detailView(c *ui.Context, rows []roleRow) {
 
 // unsupportedNotice is the whole page on OpenSearch, whose security API is
 // not the Elasticsearch native one elasticvue's role management needs.
-func unsupportedNotice(c *ui.Context) {
+func unsupportedNotice(c *ui.Context, lang string) {
 	t := c.Theme()
 	ui.Column(c).Fill().AlignItems(ui.Center).Justify(ui.Center).Gap(8).Children(func() {
-		ui.Text(c, "角色").FontSize(19).Bold()
-		ui.Text(c, "OpenSearch 不支持原生用户/角色管理").TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(lang, "角色")).FontSize(19).Bold()
+		ui.Text(c, kit.Tr(lang, "OpenSearch 不支持原生用户/角色管理")).TextColor(t.TextMuted)
 	})
 }
 
@@ -178,9 +177,9 @@ func (m *Module) buildDialogs(h kit.ModuleHost, c *ui.Context) {
 // the description field only exists from 8.15 on.
 func (m *Module) roleDialog(h kit.ModuleHost, c *ui.Context, edit bool) {
 	f := &m.form
-	title, submit := "新建角色", "创建"
+	title, submit := kit.Tr(h.Lang(), "新建角色"), kit.Tr(h.Lang(), "创建")
 	if edit {
-		title, submit = "编辑角色", "保存"
+		title, submit = kit.Tr(h.Lang(), "编辑角色"), kit.Tr(h.Lang(), "保存")
 	}
 	version := h.Version()
 	ui.Modal(c, &m.dialogOpen, func() {
@@ -190,15 +189,15 @@ func (m *Module) roleDialog(h kit.ModuleHost, c *ui.Context, edit bool) {
 			var nameErr, indicesErr string
 			if m.submitTried {
 				if strings.TrimSpace(f.Name) == "" {
-					nameErr = "名称不能为空"
+					nameErr = kit.Tr(h.Lang(), "名称不能为空")
 				}
 				if !validIndicesJSON(f.IndicesJSON) {
-					indicesErr = "必须是 JSON 数组"
+					indicesErr = kit.Tr(h.Lang(), "必须是 JSON 数组")
 				}
 			}
 			valid := strings.TrimSpace(f.Name) != "" && validIndicesJSON(f.IndicesJSON)
 
-			ui.Field(c, "名称", func() {
+			ui.Field(c, kit.Tr(h.Lang(), "名称"), func() {
 				input := ui.TextInput(c, &f.Name)
 				if !edit {
 					input.AutoFocus()
@@ -206,22 +205,22 @@ func (m *Module) roleDialog(h kit.ModuleHost, c *ui.Context, edit bool) {
 				input.ReadOnly(edit)
 			}).Error(nameErr)
 			if es.SupportsRoleDescription(version) {
-				ui.Field(c, "描述", func() {
+				ui.Field(c, kit.Tr(h.Lang(), "描述"), func() {
 					ui.TextInput(c, &f.Description)
 				})
 			}
-			ui.Field(c, "集群权限", func() {
+			ui.Field(c, kit.Tr(h.Lang(), "集群权限"), func() {
 				ui.TextInput(c, &f.Cluster)
-			}).Description("逗号分隔，如 all, monitor")
-			ui.Field(c, "索引权限", func() {
+			}).Description(kit.Tr(h.Lang(), "逗号分隔，如 all, monitor"))
+			ui.Field(c, kit.Tr(h.Lang(), "索引权限"), func() {
 				ui.TextArea(c, &f.IndicesJSON).Height(140)
-			}).Description(indicesHint(version)).Error(indicesErr)
+			}).Description(indicesHint(version, h.Lang())).Error(indicesErr)
 			ui.Field(c, "run_as", func() {
 				ui.TextInput(c, &f.RunAs)
-			}).Description("逗号分隔的代替用户")
+			}).Description(kit.Tr(h.Lang(), "逗号分隔的代替用户"))
 
 			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
-				if ui.Button(c, "取消").Clicked() {
+				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.dialogOpen = false
 				}
 				if ui.PrimaryButton(c, submit).Disabled(m.busy).Clicked() {
@@ -241,10 +240,10 @@ func (m *Module) roleDialog(h kit.ModuleHost, c *ui.Context, edit bool) {
 
 // indicesHint explains the indices JSON, mentioning allow_restricted_indices
 // only on versions that have it (6.7+).
-func indicesHint(version string) string {
-	hint := "JSON 数组，每项含 names 与 privileges"
+func indicesHint(version, lang string) string {
+	hint := kit.Tr(lang, "JSON 数组，每项含 names 与 privileges")
 	if es.SupportsAllowRestrictedIndices(version) {
-		hint += "，可用 allow_restricted_indices"
+		hint += kit.Tr(lang, "，可用 allow_restricted_indices")
 	}
 	return hint
 }
@@ -254,13 +253,13 @@ func (m *Module) confirmDialog(h kit.ModuleHost, c *ui.Context) {
 	t := c.Theme()
 	ui.Modal(c, &m.confirmOpen, func() {
 		ui.Column(c).Width(380).Padding(20).Gap(12).Children(func() {
-			ui.Text(c, "删除角色").FontSize(16).Bold()
-			ui.Text(c, "删除角色 "+m.confirmName+"？此操作不可撤销。").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "删除角色")).FontSize(16).Bold()
+			ui.Text(c, kit.Tr(h.Lang(), "删除角色 {0}？此操作不可撤销。", m.confirmName)).TextColor(t.TextMuted)
 			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
-				if ui.Button(c, "取消").Clicked() {
+				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.confirmOpen = false
 				}
-				if ui.Button(c, "删除").Background(ui.Hex("#d64545")).TextColor(ui.Hex("#ffffff")).Disabled(m.busy).Clicked() {
+				if ui.Button(c, kit.Tr(h.Lang(), "删除")).Background(ui.Hex("#d64545")).TextColor(ui.Hex("#ffffff")).Disabled(m.busy).Clicked() {
 					m.deleteRole(h)
 				}
 			})

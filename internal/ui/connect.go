@@ -3,6 +3,7 @@ package ui
 import (
 	"seismic/internal/conn"
 	"seismic/internal/es"
+	"seismic/internal/ui/kit"
 )
 
 // connectForm is the state of the add-connection form on the welcome page.
@@ -48,13 +49,13 @@ func (f *connectForm) auth() es.Auth {
 	}
 }
 
-func authLabel(v string) string {
+func authLabel(v, lang string) string {
 	for _, ch := range authChoices {
 		if string(ch.value) == v {
-			return ch.label
+			return kit.Tr(lang, ch.label)
 		}
 	}
-	return authChoices[0].label
+	return kit.Tr(lang, authChoices[0].label)
 }
 
 // testConnection pings the cluster with the form's values.

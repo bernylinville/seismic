@@ -17,6 +17,7 @@ import (
 // fakeHost runs loads synchronously so tests stay deterministic.
 type fakeHost struct {
 	client *es.Client
+	lang   string
 }
 
 func (f *fakeHost) ES() *es.Client       { return f.client }
@@ -25,6 +26,7 @@ func (f *fakeHost) Version() string      { return "8.14.1" }
 func (f *fakeHost) Distribution() string { return "elasticsearch" }
 func (f *fakeHost) BuildFlavor() string  { return "default" }
 func (f *fakeHost) DB() *db.Store        { return nil }
+func (f *fakeHost) Lang() string         { return f.lang }
 func (f *fakeHost) Load(mark func(), fn func() func()) {
 	mark()
 	fn()()
@@ -112,6 +114,22 @@ func TestTemplatesList(t *testing.T) {
 	for _, want := range []string{"logs-new", "metrics-new", "200"} {
 		if !tt.HasText(want) {
 			t.Errorf("composable list missing %q, texts %q", want, tt.Texts())
+		}
+	}
+}
+
+func TestTemplatesEnglishUI(t *testing.T) {
+	srv, _ := newTemplateES(t)
+	client, err := es.New(srv.URL, es.Auth{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	host := &fakeHost{client: client, lang: "en"}
+	m := New()
+	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1000, 640)
+	for _, want := range []string{"Index Templates", "2 templates", "Index patterns", "Legacy templates"} {
+		if !tt.HasText(want) {
+			t.Errorf("english list missing %q, texts %q", want, tt.Texts())
 		}
 	}
 }

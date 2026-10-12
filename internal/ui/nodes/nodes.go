@@ -254,17 +254,19 @@ func nodeName(node map[string]any) string {
 	return name
 }
 
-var nodesCols = []ui.TableColumn{
-	{Title: "名称", Sortable: true},
-	{Title: "IP", Width: 130},
-	{Title: "角色", Width: 70},
-	{Title: "堆内存%", Width: 80, Align: ui.End, Sortable: true},
-	{Title: "内存%", Width: 70, Align: ui.End, Sortable: true},
-	{Title: "CPU", Width: 60, Align: ui.End, Sortable: true},
-	{Title: "负载 1m", Width: 80, Align: ui.End, Sortable: true},
-	{Title: "磁盘%", Width: 70, Align: ui.End, Sortable: true},
-	{Title: "角色详情", Width: 170},
-	{Title: "版本", Width: 80},
+func nodesCols(lang string) []ui.TableColumn {
+	return []ui.TableColumn{
+		{Title: kit.Tr(lang, "名称"), Sortable: true},
+		{Title: "IP", Width: 130},
+		{Title: kit.Tr(lang, "角色"), Width: 70},
+		{Title: kit.Tr(lang, "堆内存%"), Width: 80, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "内存%"), Width: 70, Align: ui.End, Sortable: true},
+		{Title: "CPU", Width: 60, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "负载 1m"), Width: 80, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "磁盘%"), Width: 70, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "角色详情"), Width: 170},
+		{Title: kit.Tr(lang, "版本"), Width: 80},
+	}
 }
 
 // View builds the page; h is the app host.
@@ -277,18 +279,18 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	ui.Column(c).Fill().Children(func() {
 		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, "节点").FontSize(19).Bold()
-				ui.Text(c, strconv.Itoa(len(m.visibleRows()))+" 个节点").FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "节点")).FontSize(19).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 个节点", strconv.Itoa(len(m.visibleRows())))).FontSize(12).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
-			ui.SearchField(c, &m.filter).Placeholder("筛选节点…").Width(200)
-			ui.Checkbox(c, &m.hideAttrs, "隐藏系统属性")
-			if ui.Button(c, "刷新").Clicked() {
+			ui.SearchField(c, &m.filter).Placeholder(kit.Tr(h.Lang(), "筛选节点…")).Width(200)
+			ui.Checkbox(c, &m.hideAttrs, kit.Tr(h.Lang(), "隐藏系统属性"))
+			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {
 				m.load(h)
 			}
 		})
 
-		if kit.StateText(c, m.loading, m.err, len(m.rows) == 0, "没有节点") {
+		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "没有节点")) {
 			return
 		}
 
@@ -297,7 +299,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			m.selectedRow = -1
 		}
 		listState := ui.ListState{Selected: &m.selectedRow, Sort: &m.sort}
-		ui.Table(c, &listState, nodesCols, len(rows), func(row, col int) {
+		ui.Table(c, &listState, nodesCols(h.Lang()), len(rows), func(row, col int) {
 			r := rows[row]
 			switch col {
 			case 0:
@@ -334,27 +336,27 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 					m.loadDetail(h, name)
 				}
 			}
-			m.detailView(c)
+			m.detailView(c, h.Lang())
 		}
 	})
 }
 
-func (m *Module) detailView(c *ui.Context) {
+func (m *Module) detailView(c *ui.Context, lang string) {
 	t := c.Theme()
 	ui.Column(c).Height(220).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
 		Background(t.Surface).Padding(12, 16, 12, 16).Gap(6).Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, m.detailName).Bold()
-			ui.Text(c, "· 节点详情").TextColor(t.TextMuted).FontSize(12)
+			ui.Text(c, kit.Tr(lang, "· 节点详情")).TextColor(t.TextMuted).FontSize(12)
 			ui.Spacer(c)
-			if ui.Button(c, "关闭").Clicked() {
+			if ui.Button(c, kit.Tr(lang, "关闭")).Clicked() {
 				m.selectedRow = -1
 				m.detailName, m.detailJSON = "", ""
 			}
 		})
 		switch {
 		case m.detailLoad:
-			ui.Text(c, "加载中…").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(lang, "加载中…")).TextColor(t.TextMuted)
 		case m.detailErr != nil:
 			ui.Text(c, kit.ErrMessage(m.detailErr)).FontSize(12).TextColor(ui.Hex("#d64545"))
 		default:

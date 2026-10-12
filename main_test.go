@@ -113,3 +113,47 @@ func TestConnectionFlow(t *testing.T) {
 		t.Fatal("saved connection did not reconnect")
 	}
 }
+
+func TestShellEnglishUI(t *testing.T) {
+	es := newES(t)
+	dir := t.TempDir()
+	secrets, err := conn.NewFileSecretStore(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conns, err := conn.NewStore(dir, secrets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	database, err := db.Open(context.Background(), filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { database.Close() })
+
+	a := appui.NewApp(ui.NewRouter("/indices"))
+	a.SetLang("en")
+	a.AttachDeps(appui.Deps{Conns: conns, DB: database, HomeDir: dir})
+	tt := ui.NewTester(a.View, 1280, 800)
+	if !tt.HasText("Add connection") {
+		t.Fatalf("english form missing, texts %q", tt.Texts())
+	}
+	a.SetConnectForm("测试集群", es.URL, "none")
+	if err := tt.Click("Save & Connect"); err != nil {
+		t.Fatalf("click save: %v", err)
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for !a.Connected && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if !a.Connected {
+		t.Fatalf("not connected; testMsg=%q", a.ConnectTestMessage())
+	}
+	time.Sleep(50 * time.Millisecond)
+	tt.Frame()
+	for _, want := range []string{"Overview", "Indices", "REST Console", "Cluster", "0 indices", "Hide system indices"} {
+		if !tt.HasText(want) {
+			t.Errorf("missing %q, texts %q", want, tt.Texts())
+		}
+	}
+}

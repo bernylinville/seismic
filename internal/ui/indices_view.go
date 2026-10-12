@@ -2,24 +2,26 @@ package ui
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/egoist/mygo/ui"
 
 	"seismic/internal/es"
+	"seismic/internal/ui/kit"
 )
 
 func esClean(name string) string { return es.CleanIndexName(name) }
 
-var indicesCols = []ui.TableColumn{
-	{Title: "名称", Sortable: true},
-	{Title: "健康", Width: 80, Sortable: true},
-	{Title: "状态", Width: 70},
-	{Title: "文档数", Width: 110, Align: ui.End, Sortable: true},
-	{Title: "大小", Width: 90, Align: ui.End, Sortable: true},
-	{Title: "主分片", Width: 66, Align: ui.End},
-	{Title: "副本", Width: 60, Align: ui.End},
-	{Title: "创建时间", Width: 110},
+func indicesCols(lang string) []ui.TableColumn {
+	return []ui.TableColumn{
+		{Title: kit.Tr(lang, "名称"), Sortable: true},
+		{Title: kit.Tr(lang, "健康"), Width: 80, Sortable: true},
+		{Title: kit.Tr(lang, "状态"), Width: 70},
+		{Title: kit.Tr(lang, "文档数"), Width: 110, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "大小"), Width: 90, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "主分片"), Width: 66, Align: ui.End},
+		{Title: kit.Tr(lang, "副本"), Width: 60, Align: ui.End},
+		{Title: kit.Tr(lang, "创建时间"), Width: 110},
+	}
 }
 
 func (a *App) indicesPage(c *ui.Context) {
@@ -32,13 +34,13 @@ func (a *App) indicesPage(c *ui.Context) {
 	ui.Column(c).Fill().Children(func() {
 		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, "索引").FontSize(19).Bold()
-				ui.Text(c, fmt.Sprintf("%d 个索引", len(s.visibleRows()))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(a.lang, "索引")).FontSize(19).Bold()
+				ui.Text(c, kit.Tr(a.lang, "{0} 个索引", len(s.visibleRows()))).FontSize(12).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
-			ui.SearchField(c, &s.filter).Placeholder("筛选索引…").Width(220)
-			ui.Checkbox(c, &s.hideSystem, "隐藏系统索引")
-			if ui.Button(c, "刷新").Clicked() {
+			ui.SearchField(c, &s.filter).Placeholder(kit.Tr(a.lang, "筛选索引…")).Width(220)
+			ui.Checkbox(c, &s.hideSystem, kit.Tr(a.lang, "隐藏系统索引"))
+			if ui.Button(c, kit.Tr(a.lang, "刷新")).Clicked() {
 				a.indicesLoad()
 			}
 		})
@@ -46,7 +48,7 @@ func (a *App) indicesPage(c *ui.Context) {
 		if s.actionErr != "" {
 			ui.Text(c, s.actionErr).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 20, 4, 20)
 		}
-		if stateText(c, s.loading, s.err, len(s.rows) == 0, "没有索引") {
+		if stateText(c, a.lang, s.loading, s.err, len(s.rows) == 0, kit.Tr(a.lang, "没有索引")) {
 			return
 		}
 
@@ -55,29 +57,29 @@ func (a *App) indicesPage(c *ui.Context) {
 			s.selectedRow = -1
 		}
 		listState := ui.ListState{Selected: &s.selectedRow, Sort: &s.sort}
-		table := ui.Table(c, &listState, indicesCols, len(rows), func(row, col int) {
+		table := ui.Table(c, &listState, indicesCols(a.lang), len(rows), func(row, col int) {
 			r := rows[row]
 			switch col {
 			case 0:
 				ui.Text(c, r.Index).SingleLine().ContextMenu(func(m *ui.Menu) {
-					if m.Item("查看设置").Chosen() {
+					if m.Item(kit.Tr(a.lang, "查看设置")).Chosen() {
 						a.indicesShowDetail(r.Index)
 					}
-					if m.Item("刷新").Chosen() {
-						a.indicesAction("刷新", r.Index, a.indicesRefreshAction)
+					if m.Item(kit.Tr(a.lang, "刷新")).Chosen() {
+						a.indicesAction(kit.Tr(a.lang, "刷新"), r.Index, a.indicesRefreshAction)
 					}
 					if r.Status == "open" {
-						if m.Item("关闭").Chosen() {
-							a.indicesAction("关闭", r.Index, a.indicesCloseAction)
+						if m.Item(kit.Tr(a.lang, "关闭")).Chosen() {
+							a.indicesAction(kit.Tr(a.lang, "关闭"), r.Index, a.indicesCloseAction)
 						}
 					} else {
-						if m.Item("打开").Chosen() {
-							a.indicesAction("打开", r.Index, a.indicesOpenAction)
+						if m.Item(kit.Tr(a.lang, "打开")).Chosen() {
+							a.indicesAction(kit.Tr(a.lang, "打开"), r.Index, a.indicesOpenAction)
 						}
 					}
 					m.Separator()
-					if m.Item("删除…").Chosen() {
-						a.indicesAction("删除", r.Index, a.indicesDeleteAction)
+					if m.Item(kit.Tr(a.lang, "删除…")).Chosen() {
+						a.indicesAction(kit.Tr(a.lang, "删除"), r.Index, a.indicesDeleteAction)
 					}
 				})
 			case 1:
@@ -116,15 +118,15 @@ func (a *App) indicesDetailView(c *ui.Context) {
 		Background(t.Surface).Padding(12, 16, 12, 16).Gap(6).Children(func() {
 		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, s.detailName).Bold()
-			ui.Text(c, "· 设置").TextColor(t.TextMuted).FontSize(12)
+			ui.Text(c, kit.Tr(a.lang, "· 设置")).TextColor(t.TextMuted).FontSize(12)
 			ui.Spacer(c)
-			if ui.Button(c, "关闭").Clicked() {
+			if ui.Button(c, kit.Tr(a.lang, "关闭")).Clicked() {
 				s.detailName = ""
 				s.detail = nil
 			}
 		})
 		if s.detailLoading {
-			ui.Text(c, "加载中…").TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(a.lang, "加载中…")).TextColor(t.TextMuted)
 			return
 		}
 		if len(s.detail) > 0 {

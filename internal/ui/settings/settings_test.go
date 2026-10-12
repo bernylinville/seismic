@@ -18,6 +18,7 @@ import (
 // fakeHost runs loads synchronously so tests stay deterministic.
 type fakeHost struct {
 	client *es.Client
+	lang   string
 }
 
 func (f *fakeHost) ES() *es.Client       { return f.client }
@@ -26,6 +27,7 @@ func (f *fakeHost) Version() string      { return "8.14.1" }
 func (f *fakeHost) Distribution() string { return "elasticsearch" }
 func (f *fakeHost) BuildFlavor() string  { return "default" }
 func (f *fakeHost) DB() *db.Store        { return nil }
+func (f *fakeHost) Lang() string         { return f.lang }
 func (f *fakeHost) Load(mark func(), fn func() func()) {
 	mark()
 	fn()()
@@ -70,9 +72,25 @@ func newModule(t *testing.T) (*Module, *ui.Tester, *map[string][]byte) {
 		t.Fatal(err)
 	}
 	m := New()
-	host := &fakeHost{client: client}
+	host := &fakeHost{client: client, lang: ""}
 	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1000, 640)
 	return m, tt, puts
+}
+
+func TestSettingsEnglishUI(t *testing.T) {
+	srv, _ := newSettingsES(t)
+	client, err := es.New(srv.URL, es.Auth{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	host := &fakeHost{client: client, lang: "en"}
+	m := New()
+	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1000, 640)
+	for _, want := range []string{"Cluster settings", "3 settings", "Section", "Key", "Value"} {
+		if !tt.HasText(want) {
+			t.Errorf("missing %q, texts %q", want, tt.Texts())
+		}
+	}
 }
 
 func TestSettingsList(t *testing.T) {

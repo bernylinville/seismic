@@ -8,6 +8,7 @@ import (
 
 	"seismic/internal/conn"
 	"seismic/internal/db"
+	"seismic/internal/ui/kit"
 )
 
 // Deps are the app's stores, injected from main.
@@ -64,7 +65,7 @@ func (a *App) connectTo(c conn.Connection) {
 				health = "unknown"
 			}
 			a.ClusterHealth = health
-			a.UpdatedText = "刚刚更新"
+			a.UpdatedText = kit.Tr(a.lang, "刚刚更新")
 		})
 		time.AfterFunc(30*time.Second, a.refreshHealth)
 	}()
@@ -103,7 +104,7 @@ func (a *App) refreshHealth() {
 				return
 			}
 			a.ClusterHealth = h.Status
-			a.UpdatedText = "刚刚更新"
+			a.UpdatedText = kit.Tr(a.lang, "刚刚更新")
 		})
 		time.AfterFunc(30*time.Second, a.refreshHealth)
 	}()
