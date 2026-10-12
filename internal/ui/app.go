@@ -5,6 +5,9 @@ package ui
 import (
 	"fmt"
 
+	"context"
+
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 )
 
@@ -54,6 +57,14 @@ type App struct {
 	ShardsText    string
 	UpdatedText   string
 
+	// win and ctx arrive from main once the window exists; goroutines
+	// report back with update, which runs on the main thread.
+	win *mygo.Window
+	ctx context.Context
+
+	// connect is the add-connection sheet's state.
+	connect connectForm
+
 	// Lang is "zh" or "en".
 	Lang string
 }
@@ -61,6 +72,26 @@ type App struct {
 // NewApp makes the app state around the given router.
 func NewApp(router *ui.Router) *App {
 	return &App{router: router, Lang: "zh", ClusterHealth: "unknown"}
+}
+
+// Attach wires the window (for cross-goroutine updates) and the app context.
+func (a *App) Attach(win *mygo.Window, ctx context.Context) {
+	a.win = win
+	a.ctx = ctx
+}
+
+// update runs f on the main thread and draws a frame; background work ends
+// with it, as the view reads state on the main thread only.
+func (a *App) update(f func()) {
+	if a.win != nil {
+		a.win.Update(f)
+	}
+}
+
+func (a *App) invalidate() {
+	if a.win != nil {
+		a.win.Invalidate()
+	}
 }
 
 // View builds the window: a welcome page until a cluster is connected,
