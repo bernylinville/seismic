@@ -79,14 +79,14 @@
 - **配色**：teal accent 全链路清零（app.go 覆盖 r1 + editor 语法高亮 key 色 r15），健康/错误/状态色去重为主题语义 `Success/Warning/Danger` 并自动跟随系统 accent 与深浅模式，破坏性操作统一 `kit.DangerButton`。
 - **控件**：kit 字号阶梯 `SizeCaption/SizeBody/SizeTitle/SizeLarge/SizeMono`（Rem 推导，跟随系统字体设置）替换全应用约 90 处硬编码 `FontSize`，表格正文走主题默认 13，`panel()/card()` helper 统一分组卡片材质。
 - **间距**：pixel padding/gap 全部换 `t.Space(n)`（含壳层状态栏/欢迎页/连接表单），密度向系统 App 看齐。
-- **交互**：⌘R 全部 13 页刷新、⌘↩ 搜索/rest 发送/欢迎页保存并连接、⌘T rest 新建标签；索引/用户/角色/rest 历史/已存连接五处系统右键菜单。
+- **交互**：⌘R 12 页刷新（rest 页无刷新语义，发送走 ⌘↩）、⌘↩ 搜索/rest 发送/欢迎页保存并连接、⌘T rest 新建标签；索引/用户/角色/rest 历史/已存连接五处系统右键菜单。过渡动画细节未做（方向线残留，后续迭代）。
 
 **测试状态**：`go build ./...` + `go tool mygo vet .` + `CGO_ENABLED=0 go test ./...` 全绿（260 tests / 20 packages，含 r16 新增的 ⌘↩ 与连接删除 Tester 回归）；浅色+深色 11 张截图每轮刷新，最终态在 `../es-native-design/shots/ui/`。
 
 **实机目检注意事项**（`build/darwin-universal/Seismic.app`，30.1 MB，rsync 到 Mac）：
 - 毛玻璃与标题栏融合、系统 accent 联动只能实机验证（截图里 Tester 以中性色占位）：改系统强调色/深浅模式，侧边栏选中色、editor 键名高亮应即时跟随。
 - 深色模式下健康点/状态色/错误红的自动变体；破坏性确认（删索引/模板/仓库/用户/角色/连接、集群设置确认修改）应为红色 DangerButton。
-- 快捷键过一遍：⌘R（各页）、⌘↩（搜索/rest 发送、欢迎页连接）、⌘T（rest 新标签）；右键：索引/用户/角色行、rest 历史、欢迎页已存连接。
+- 快捷键过一遍：⌘R（除 rest 外各页）、⌘↩（搜索/rest 发送、欢迎页连接）、⌘T（rest 新标签）；右键：索引/用户/角色行、rest 历史、欢迎页已存连接。
 - 欢迎页不在截图清单：标题 26、连接卡片圆角/间距、⌘↩ 默认动作需实机确认。
 - 有意保留项：editor 画布绘制常量（自绘 metric，非主题覆盖）、固定宽度（侧边栏 220/表单 360/搜索框 200）、07-snapshots 截图的 decode 错误为既有 mock 数据形态（非回归）。
 
