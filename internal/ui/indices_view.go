@@ -34,11 +34,7 @@ func (a *App) indicesPage(c *ui.Context) {
 	c.OnShortcut(ui.Cmd, ui.KeyR, func() { a.indicesLoad() })
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
-			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(a.lang, "索引")).FontSize(kit.SizeTitle(t)).Bold()
-				ui.Text(c, kit.Tr(a.lang, "{0} 个索引", len(s.visibleRows()))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
-			})
+		kit.PageHeader(c, kit.Tr(a.lang, "索引"), kit.Tr(a.lang, "{0} 个索引", len(s.visibleRows())), func() {
 			ui.Spacer(c)
 			ui.SearchField(c, &s.filter).Placeholder(kit.Tr(a.lang, "筛选索引…")).Width(220)
 			ui.Checkbox(c, &s.hideSystem, kit.Tr(a.lang, "隐藏系统索引"))

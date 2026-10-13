@@ -480,12 +480,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	c.OnShortcut(ui.Cmd, ui.KeyEnter, runSearch)
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
-			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "文档搜索")).FontSize(kit.SizeTitle(t)).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "在匹配的索引上执行查询")).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
-			})
-		})
+		kit.PageHeader(c, kit.Tr(h.Lang(), "文档搜索"), kit.Tr(h.Lang(), "在匹配的索引上执行查询"), nil)
 
 		ui.Column(c).Grow(1).Padding(0, t.Space(5), t.Space(4), t.Space(5)).Gap(t.Space(3)).Children(func() {
 			// 查询区。

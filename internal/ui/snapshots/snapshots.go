@@ -168,11 +168,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	})
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
-			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "快照")).FontSize(kit.SizeTitle(t)).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "{0} 个快照", len(m.snaps))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
-			})
+		kit.PageHeader(c, kit.Tr(h.Lang(), "快照"), kit.Tr(h.Lang(), "{0} 个快照", len(m.snaps)), func() {
 			ui.Spacer(c)
 			if len(m.repos) > 0 {
 				if ui.Select(c, &m.repo, m.repos).Changed() {

@@ -137,11 +137,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	c.OnShortcut(ui.Cmd, ui.KeyR, func() { m.load(h) })
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
-			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "分片恢复")).FontSize(kit.SizeTitle(t)).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "{0} 条恢复记录", itoa(len(m.visibleRows())))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
-			})
+		kit.PageHeader(c, kit.Tr(h.Lang(), "分片恢复"), kit.Tr(h.Lang(), "{0} 条恢复记录", itoa(len(m.visibleRows()))), func() {
 			ui.Spacer(c)
 			ui.SearchField(c, &m.filter).Label(kit.Tr(h.Lang(), "筛选索引…")).Placeholder(kit.Tr(h.Lang(), "筛选索引…")).Width(220)
 			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {

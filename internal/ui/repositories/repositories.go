@@ -79,11 +79,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	c.OnShortcut(ui.Cmd, ui.KeyR, func() { m.load(h) })
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
-			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "快照仓库")).FontSize(kit.SizeTitle(t)).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "{0} 个仓库", len(m.rows))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
-			})
+		kit.PageHeader(c, kit.Tr(h.Lang(), "快照仓库"), kit.Tr(h.Lang(), "{0} 个仓库", len(m.rows)), func() {
 			ui.Spacer(c)
 			ui.SearchField(c, &m.filter).Placeholder(kit.Tr(h.Lang(), "筛选仓库…")).Width(200)
 			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {
