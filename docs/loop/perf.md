@@ -5,7 +5,7 @@
 ## 待办（按序）
 
 - [x] 0. 升级 mygo v0.4.5→最新（go get @latest；vet；migrate-ui 有提示则执行；全测试）
-- [ ] 1. internal/es/client.go 响应护栏：Request 的 io.ReadAll 加 io.LimitReader（64MB 起步），超限清晰报错
+- [x] 1. internal/es/client.go 响应护栏：Request 的 io.ReadAll 加 io.LimitReader（64MB 起步），超限清晰报错
 - [ ] 2. 减拷贝：json.Decoder 直解 resp.Body，消除 ReadAll+Unmarshal 双份内存
 - [ ] 3. 表格过滤/排序缓存：indices_state.go 与 shards 的 visibleRows() 改脏标记，数据变化时算一次
 - [ ] 4. 编辑器防护：文档大小上限、Validate 防抖、超大文档降级提示
@@ -24,3 +24,4 @@
 |---|---|---|
 | 0 | 基线提交 | 238 tests green, commit ad53111 |
 | 0' | mygo v0.4.5→v0.4.8，migrate-ui 迁移 editor.go Key API（4 处） | vet 干净, 238 tests green, commit 45a7211 |
+| 1 | 响应护栏：maxResponseBytes=64MB，LimitReader(lim+1) 探测超限，错误提示收窄请求；边界测试 ×2 | 240 tests green, commit c993bb0 |
