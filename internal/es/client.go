@@ -18,6 +18,13 @@ import (
 // AuthType mirrors elasticvue AuthType (src/store/connection.ts).
 type AuthType string
 
+// maxResponseBytes caps response bodies read into memory. ES JSON replies
+// (cat APIs, search, mappings) stay far below this even on large clusters;
+// anything bigger is almost certainly a mis-sized request and would otherwise
+// balloon memory without a usable error.
+const maxResponseBytes = 64 << 20 // 64 MB
+
+
 const (
 	AuthNone   AuthType = "none"
 	AuthBasic  AuthType = "basicAuth"
@@ -220,9 +227,14 @@ func (c *Client) Request(ctx context.Context, method, path string, params any) (
 	}
 	defer resp.Body.Close()
 
-	data, err := io.ReadAll(resp.Body)
+	// Read at most maxResponseBytes+1 so an oversized body is detected by the
+	// extra byte instead of buffering it all first.
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
 	if err != nil {
 		return nil, err
+	}
+	if len(data) > maxResponseBytes {
+		return nil, fmt.Errorf("es: %s %s response exceeds the %d MB limit; narrow the request (filter_path, size, or pagination)", method, path, maxResponseBytes>>20)
 	}
 
 	if method == http.MethodHead {

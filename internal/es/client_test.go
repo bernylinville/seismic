@@ -1,6 +1,7 @@
 package es
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -163,4 +164,27 @@ func TestChunkIndices(t *testing.T) {
 
 func itoa(i int) string {
 	return string(rune('a' + i))
+}
+
+func TestClientResponseSizeLimit(t *testing.T) {
+	c, _ := newTestClient(t, Auth{Type: AuthNone}, func(w http.ResponseWriter, r *http.Request) {
+		w.Write(bytes.Repeat([]byte("x"), maxResponseBytes+1))
+	})
+	_, err := c.Request(context.Background(), http.MethodGet, "_cat/indices", nil)
+	if err == nil || !strings.Contains(err.Error(), "exceeds the 64 MB limit") {
+		t.Fatalf("err = %v, want size-limit error", err)
+	}
+}
+
+func TestClientResponseAtLimitOK(t *testing.T) {
+	c, _ := newTestClient(t, Auth{Type: AuthNone}, func(w http.ResponseWriter, r *http.Request) {
+		w.Write(bytes.Repeat([]byte("x"), maxResponseBytes))
+	})
+	resp, err := c.Request(context.Background(), http.MethodGet, "_cat/indices", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.Body) != maxResponseBytes {
+		t.Errorf("body = %d bytes, want %d", len(resp.Body), maxResponseBytes)
+	}
 }
