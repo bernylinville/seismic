@@ -26,15 +26,15 @@ type Row struct {
 	Unassigned string      `json:"unassigned.reason"`
 }
 
-// stateColor maps shard state to the app's three semantic colors.
-func stateColor(state string) ui.Color {
+// stateColor maps shard state to the theme's semantic colors.
+func stateColor(t *ui.Theme, state string) ui.Color {
 	switch state {
 	case "STARTED":
-		return ui.Hex("#2f9e63")
+		return t.Success
 	case "UNASSIGNED":
-		return ui.Hex("#d64545")
+		return t.Danger
 	default: // INITIALIZING / RELOCATING / POST_RECOVERY …
-		return ui.Hex("#d9a406")
+		return t.Warning
 	}
 }
 
@@ -223,12 +223,14 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		m.load(h)
 	}
 	t := c.Theme()
+	// ⌘R 刷新，系统习惯。
+	c.OnShortcut(ui.Cmd, ui.KeyR, func() { m.load(h) })
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "分片")).FontSize(19).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "{0} 个分片", itoa(len(m.visibleRows())))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "分片")).FontSize(kit.SizeTitle(t)).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 个分片", itoa(len(m.visibleRows())))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
 			ui.SearchField(c, &m.filter).Label(kit.Tr(h.Lang(), "筛选索引…")).Placeholder(kit.Tr(h.Lang(), "筛选索引…")).Width(220)
@@ -238,7 +240,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		})
 
 		if m.actionErr != "" {
-			ui.Text(c, m.actionErr).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 20, 4, 20)
+			ui.Text(c, m.actionErr).FontSize(kit.SizeCaption(t)).TextColor(t.Danger).Padding(0, t.Space(5), t.Space(1), t.Space(5))
 		}
 
 		if m.rerouting != nil {
@@ -270,24 +272,24 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 					}
 				})
 			case 1:
-				ui.Text(c, r.Shard.String()).FontSize(12)
+				ui.Text(c, r.Shard.String())
 			case 2:
-				ui.Text(c, kit.Tr(h.Lang(), prirepLabel(r.Prirep))).FontSize(12)
+				ui.Text(c, kit.Tr(h.Lang(), prirepLabel(r.Prirep)))
 			case 3:
-				ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-					kit.Dot(c, 7, stateColor(r.State))
-					ui.Text(c, r.State).FontSize(12)
+				ui.Row(c).Gap(t.Space(1.5)).AlignItems(ui.Center).Children(func() {
+					kit.Dot(c, t.Space(1.75), stateColor(t, r.State))
+					ui.Text(c, r.State)
 				})
 			case 4:
-				ui.Text(c, r.Docs.String()).FontSize(12)
+				ui.Text(c, r.Docs.String())
 			case 5:
-				ui.Text(c, r.Store).FontSize(12)
+				ui.Text(c, r.Store)
 			case 6:
-				ui.Text(c, r.Node).FontSize(12)
+				ui.Text(c, r.Node)
 			case 7:
-				ui.Text(c, r.Unassigned).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, r.Unassigned).TextColor(t.TextMuted)
 			}
-		}).Grow(1).Padding(0, 12, 0, 12)
+		}).Grow(1).Padding(0, t.Space(3), 0, t.Space(3))
 		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
 		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
 		m.prefs.Sync(h, "shards", listState.Columns)
@@ -298,11 +300,11 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 func (m *Module) rerouteBar(h kit.ModuleHost, c *ui.Context) {
 	t := c.Theme()
 	shard := m.rerouting
-	ui.Row(c).Padding(8, 20).Gap(8).AlignItems(ui.Center).Children(func() {
+	ui.Row(c).Padding(t.Space(2), t.Space(5)).Gap(t.Space(2)).AlignItems(ui.Center).Children(func() {
 		if shard.Node != "" {
-			ui.Text(c, kit.Tr(h.Lang(), "重新分配 {0}[{1}]（当前 {2}）到：", shard.Index, shard.Shard.String(), shard.Node)).FontSize(12)
+			ui.Text(c, kit.Tr(h.Lang(), "重新分配 {0}[{1}]（当前 {2}）到：", shard.Index, shard.Shard.String(), shard.Node)).FontSize(kit.SizeCaption(t))
 		} else {
-			ui.Text(c, kit.Tr(h.Lang(), "移动 {0}[{1}] 到：", shard.Index, shard.Shard.String())).FontSize(12)
+			ui.Text(c, kit.Tr(h.Lang(), "移动 {0}[{1}] 到：", shard.Index, shard.Shard.String())).FontSize(kit.SizeCaption(t))
 		}
 		for _, node := range m.nodes() {
 			if node == shard.Node {
