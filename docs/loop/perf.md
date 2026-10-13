@@ -11,7 +11,7 @@
 - [x] 4. 编辑器防护：文档大小上限、Validate 防抖、超大文档降级提示
 - [x] 5. REST 控制台大响应：>1MB 跳过全量 json.Indent，分块或按需格式化
 - [x] 6. 请求取消：UI 层传真实 ctx，切页/切连接/重查询时取消在途请求
-- [ ] 7. mapping 拉取异步化 + 按 pattern 缓存，移出搜索点击同步路径（ui/search/search.go:352-411）
+- [x] 7. mapping 拉取异步化 + 按 pattern 缓存，移出搜索点击同步路径（ui/search/search.go:352-411）
 - [ ] 8. 造数+benchmark：es8 灌 5k 索引 + 10k hits；Go benchmark（visibleRows、tokenizer、client 解码）+ smoke 阈值断言
 
 ## 已完成
@@ -30,3 +30,4 @@
 | 4 | 编辑器三层防护：8MiB 硬上限（SetText 拒载/插入拒增长+状态栏提示）；1MiB 降级（停逐键校验/高亮/补全，打开时强制校验一次）；64KiB 起防抖（200ms 一次）。框架限制记录：v0.4.8 文本输入绑定为 string 每帧物化，buffer 版 TextAreaBuffer 需整体替换自定义编辑器 | 251 tests green, vet 干净, commit 2ae6e5f |
 | 5 | REST 大响应分级：>1MiB 跳过全量 json.Indent（省 1.5-2× 缩进副本），原样显示 + 双语提示行；小响应照常缩进；lang 主线程捕获避免 worker 竞态 | 252 tests green, vet 干净, commit 4fc120e |
 | 6 | Load(key, mark, fn(ctx))：33 站点 15 模块全迁移；同 key 单飞取消（重查询不堆积）+ 切连接 cancelAllLoads；被取代结果丢弃、被取消结果以「已取消」落地；注册表互斥锁保护。设计取舍：切页不取消（模块状态持久，返回时数据已就绪；在途量由 per-key 槽位约束）。既有问题记录：无窗口测试模式 a.update 内联在 worker 跑，race detector 会报（生产走 Window.Update 主线程，非本轮引入） | 254 tests green, vet 干净, commit f0fb5f4 |
+| 7 | mapping 按 cluster+pattern 缓存（16 槽插入序逐出）：切回旧 pattern 即时命中；集群维度键隔离防串集群；失败清 mappedKey 可重试；换 pattern 自动取消在途 wildcard 拉取（复用轮 6 槽位）。注：拉取本就经 h.Load 在 worker，本轮消掉的是重复的 MB 级 _mapping 往返 | 255 tests green, vet 干净, commit 11d6854 |
