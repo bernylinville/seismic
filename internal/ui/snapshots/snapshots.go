@@ -158,12 +158,20 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		}
 	}
 	t := c.Theme()
+	// ⌘R 刷新，系统习惯。
+	c.OnShortcut(ui.Cmd, ui.KeyR, func() {
+		m.loadRepos(h)
+		m.loadSnaps(h)
+		if slmOK {
+			m.loadSlm(h)
+		}
+	})
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "快照")).FontSize(19).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "{0} 个快照", len(m.snaps))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "快照")).FontSize(kit.SizeTitle(t)).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 个快照", len(m.snaps))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
 			if len(m.repos) > 0 {
@@ -187,13 +195,13 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		})
 
 		if m.actionErr != "" {
-			ui.Text(c, m.actionErr).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 20, 4, 20)
+			ui.Text(c, m.actionErr).FontSize(kit.SizeCaption(t)).TextColor(t.Danger).Padding(0, t.Space(5), t.Space(1), t.Space(5))
 		}
 		if m.actionMsg != "" {
-			ui.Text(c, m.actionMsg).FontSize(12).TextColor(t.TextMuted).Padding(0, 20, 4, 20)
+			ui.Text(c, m.actionMsg).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted).Padding(0, t.Space(5), t.Space(1), t.Space(5))
 		}
 		if client == nil {
-			ui.Text(c, kit.Tr(h.Lang(), "未连接集群")).TextColor(t.TextMuted).Padding(0, 16)
+			ui.Text(c, kit.Tr(h.Lang(), "未连接集群")).TextColor(t.TextMuted).Padding(0, t.Space(4))
 			return
 		}
 
@@ -211,15 +219,15 @@ func (m *Module) snapshotsTable(h kit.ModuleHost, c *ui.Context) {
 		return
 	}
 	if m.repoErr != nil {
-		ui.Text(c, kit.ErrMessage(m.repoErr)).FontSize(12).TextColor(ui.Hex("#d64545"))
+		ui.Text(c, kit.ErrMessage(m.repoErr)).FontSize(kit.SizeCaption(t)).TextColor(t.Danger)
 		return
 	}
 	if m.repo == "" {
-		ui.Text(c, kit.Tr(h.Lang(), "先去「快照仓库」加一个仓库")).TextColor(t.TextMuted).Padding(0, 16)
+		ui.Text(c, kit.Tr(h.Lang(), "先去「快照仓库」加一个仓库")).TextColor(t.TextMuted).Padding(0, t.Space(4))
 		return
 	}
 	if m.err != nil {
-		ui.Text(c, kit.ErrMessage(m.err)).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 16)
+		ui.Text(c, kit.ErrMessage(m.err)).FontSize(kit.SizeCaption(t)).TextColor(t.Danger).Padding(0, t.Space(4))
 		return
 	}
 	rows := m.visibleSnaps()
@@ -237,22 +245,22 @@ func (m *Module) snapshotsTable(h kit.ModuleHost, c *ui.Context) {
 		case 0:
 			ui.Text(c, r.Snapshot).SingleLine()
 		case 1:
-			ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-				kit.Dot(c, 7, stateColor(r.State))
-				ui.Text(c, r.State).FontSize(12)
+			ui.Row(c).Gap(t.Space(1.5)).AlignItems(ui.Center).Children(func() {
+				kit.Dot(c, t.Space(1.75), stateColor(t, r.State))
+				ui.Text(c, r.State)
 			})
 		case 2:
-			ui.Text(c, fmtTime(r.StartTimeInMillis)).FontSize(12)
+			ui.Text(c, fmtTime(r.StartTimeInMillis))
 		case 3:
-			ui.Text(c, fmtTime(r.EndTimeInMillis)).FontSize(12)
+			ui.Text(c, fmtTime(r.EndTimeInMillis))
 		case 4:
-			ui.Text(c, strconv.Itoa(len(r.Indices))).FontSize(12)
+			ui.Text(c, strconv.Itoa(len(r.Indices)))
 		case 5:
-			ui.Text(c, strconv.Itoa(r.Shards.Successful)).FontSize(12)
+			ui.Text(c, strconv.Itoa(r.Shards.Successful))
 		case 6:
-			ui.Text(c, strconv.Itoa(r.Shards.Failed)).FontSize(12).TextColor(failColor(r.Shards.Failed))
+			ui.Text(c, strconv.Itoa(r.Shards.Failed)).TextColor(failColor(t, r.Shards.Failed))
 		case 7:
-			ui.Row(c).Gap(6).Children(func() {
+			ui.Row(c).Gap(t.Space(1.5)).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "详情…")).Clicked() {
 					m.showDetail(h, r.Snapshot)
 				}
@@ -267,7 +275,7 @@ func (m *Module) snapshotsTable(h kit.ModuleHost, c *ui.Context) {
 				}
 			})
 		}
-	}).Grow(1).Padding(0, 12, 0, 12)
+	}).Grow(1).Padding(0, t.Space(3), 0, t.Space(3))
 	// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
 	// 回调），每帧把改完的布局交回 Sync 比较并持久化。
 	m.prefs.Sync(h, "snapshots", listState.Columns)
@@ -279,11 +287,11 @@ func (m *Module) snapshotsTable(h kit.ModuleHost, c *ui.Context) {
 
 func (m *Module) detailView(c *ui.Context, lang string) {
 	t := c.Theme()
-	ui.Column(c).Height(190).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
-		Background(t.Surface).Padding(12, 16, 12, 16).Gap(6).Children(func() {
-		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+	ui.Column(c).Height(t.Space(47.5)).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
+		Background(t.Surface).Padding(t.Space(3), t.Space(4), t.Space(3), t.Space(4)).Gap(t.Space(1.5)).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, m.detailName).Bold()
-			ui.Text(c, kit.Tr(lang, "· 详情")).TextColor(t.TextMuted).FontSize(12)
+			ui.Text(c, kit.Tr(lang, "· 详情")).TextColor(t.TextMuted).FontSize(kit.SizeCaption(t))
 			ui.Spacer(c)
 			if ui.Button(c, kit.Tr(lang, "关闭")).Clicked() {
 				m.detailName, m.detail = "", nil
@@ -296,25 +304,25 @@ func (m *Module) detailView(c *ui.Context, lang string) {
 		if m.detail == nil {
 			return
 		}
-		ui.Row(c).Gap(16).Children(func() {
-			ui.Text(c, kit.Tr(lang, "索引 {0} 个", len(m.detail.Indices))).FontSize(12)
+		ui.Row(c).Gap(t.Space(4)).Children(func() {
+			ui.Text(c, kit.Tr(lang, "索引 {0} 个", len(m.detail.Indices)))
 			ui.Text(c, kit.Tr(lang, "分片：成功 {0} · 失败 {1} · 共 {2}",
-				m.detail.Shards.Successful, m.detail.Shards.Failed, m.detail.Shards.Total)).FontSize(12)
-			ui.Text(c, m.detail.State).FontSize(12).TextColor(stateColor(m.detail.State))
+				m.detail.Shards.Successful, m.detail.Shards.Failed, m.detail.Shards.Total))
+			ui.Text(c, m.detail.State).TextColor(stateColor(t, m.detail.State))
 		})
 		sorted := slices.Clone(m.detail.Indices)
 		slices.Sort(sorted)
-		ui.Text(c, strings.Join(sorted, ", ")).FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, strings.Join(sorted, ", ")).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 	})
 }
 
 func (m *Module) slmSection(h kit.ModuleHost, c *ui.Context) {
 	t := c.Theme()
-	ui.Column(c).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).Padding(12, 12, 12, 12).Gap(8).Children(func() {
-		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
+	ui.Column(c).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).Padding(t.Space(3)).Gap(t.Space(2)).Children(func() {
+		ui.Row(c).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, kit.Tr(h.Lang(), "自动快照")).Bold()
 			if m.slmMode != "" {
-				ui.Text(c, kit.Tr(h.Lang(), "状态：{0}", m.slmMode)).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "状态：{0}", m.slmMode)).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			}
 			ui.Spacer(c)
 			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {
@@ -330,7 +338,7 @@ func (m *Module) slmSection(h kit.ModuleHost, c *ui.Context) {
 			}
 		})
 		if m.slmErr != nil {
-			ui.Text(c, kit.ErrMessage(m.slmErr)).FontSize(12).TextColor(ui.Hex("#d64545"))
+			ui.Text(c, kit.ErrMessage(m.slmErr)).FontSize(kit.SizeCaption(t)).TextColor(t.Danger)
 			return
 		}
 		if kit.StateText(c, h.Lang(), m.slmLoading && !m.slmLoaded, nil, len(m.slmPolicies) == 0, kit.Tr(h.Lang(), "还没有策略")) {
@@ -346,13 +354,13 @@ func (m *Module) slmSection(h kit.ModuleHost, c *ui.Context) {
 			case 0:
 				ui.Text(c, id).SingleLine()
 			case 1:
-				ui.Text(c, p.Policy.Schedule).FontSize(12)
+				ui.Text(c, p.Policy.Schedule)
 			case 2:
-				ui.Text(c, p.Policy.Repository).FontSize(12)
+				ui.Text(c, p.Policy.Repository)
 			case 3:
-				ui.Text(c, fmtTime(p.NextExecutionMillis)).FontSize(12)
+				ui.Text(c, fmtTime(p.NextExecutionMillis))
 			case 4:
-				ui.Row(c).Gap(6).Children(func() {
+				ui.Row(c).Gap(t.Space(1.5)).Children(func() {
 					if ui.Button(c, kit.Tr(h.Lang(), "执行")).Clicked() {
 						m.executeSlm(h, id)
 					}
@@ -369,6 +377,7 @@ func (m *Module) slmSection(h kit.ModuleHost, c *ui.Context) {
 }
 
 func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
+	t := c.Theme()
 
 	ui.Modal(c, &m.restoreOpen, func() {
 		ui.Text(c, kit.Tr(h.Lang(), "恢复快照 {0}", m.restoreName)).Bold()
@@ -386,7 +395,7 @@ func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
 				ui.Checkbox(c, &m.restoreIgnoreUnavailable, kit.Tr(h.Lang(), "忽略不可用索引"))
 			})
 		})
-		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).Justify(ui.End).Children(func() {
 			if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 				m.restoreOpen = false
 			}
@@ -411,7 +420,7 @@ func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
 				ui.Checkbox(c, &m.newIgnoreUnavailable, kit.Tr(h.Lang(), "忽略不可用索引"))
 			})
 		})
-		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).Justify(ui.End).Children(func() {
 			if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 				m.newOpen = false
 			}
@@ -434,7 +443,7 @@ func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
 			ui.Field(c, kit.Tr(h.Lang(), "定时"), func() { ui.TextInput(c, &m.slmNewSchedule) }).Description(kit.Tr(h.Lang(), "cron 表达式，如 0 30 1 * * ?"))
 			ui.Field(c, kit.Tr(h.Lang(), "索引"), func() { ui.TextInput(c, &m.slmNewIndices) }).Description(kit.Tr(h.Lang(), "逗号分隔，* 为全部"))
 		})
-		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).Justify(ui.End).Children(func() {
 			if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 				m.slmNewOpen = false
 			}
@@ -736,22 +745,22 @@ func fmtTime(ms int64) string {
 }
 
 // stateColor maps a snapshot state to the health colors.
-func stateColor(state string) ui.Color {
+func stateColor(t *ui.Theme, state string) ui.Color {
 	switch state {
 	case "SUCCESS":
-		return ui.Hex("#2f9e63")
+		return t.Success
 	case "FAILED":
-		return ui.Hex("#d64545")
+		return t.Danger
 	case "IN_PROGRESS", "PARTIAL":
-		return ui.Hex("#d9a406")
+		return t.Warning
 	}
-	return ui.Hex("#2f9e63")
+	return t.Success
 }
 
 // failColor marks failed shards red when there are any.
-func failColor(n int) ui.Color {
+func failColor(t *ui.Theme, n int) ui.Color {
 	if n > 0 {
-		return ui.Hex("#d64545")
+		return t.Danger
 	}
-	return ui.Hex("#2f9e63")
+	return t.Success
 }

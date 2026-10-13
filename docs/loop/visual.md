@@ -24,7 +24,7 @@
 | nodes | ✅ | ✅ | ✅ | ✅ | ✅ |
 | shards | ✅ | ✅ | ✅ | ✅ | ✅ |
 | recovery | ✅ | ✅ | ✅ | ✅ | ✅ |
-| snapshots | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| snapshots | ✅ | ✅ | ✅ | ✅ | ✅ |
 | repositories | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | templates | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | settings | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -43,6 +43,7 @@
 | 6 | nodes 全五维：与 indices 同构同套路——页头/表格/详情全换 Space 与字阶；表格 9 处 FontSize(12) 拆除；详情错误红→`t.Danger`；⌘R；详情 JSON 与 indices 详情统一为 mono+`kit.SizeMono`（两处 JSON 面板观感一致） | 259 tests green, vet 干净 |
 | 7 | shards 全五维：`stateColor` 硬编码→主题语义（STARTED Success/UNASSIGNED Danger/其余 Warning，加 *ui.Theme 参数）；页头/表格/reroute 条全换 Space 与字阶；表格 8 处 FontSize(12) 拆除；状态点 7px→Space(1.75)；操作错误→`t.Danger`；⌘R | 259 tests green, vet 干净 |
 | 8 | recovery 全五维：`stageColor` 硬编码→主题语义（DONE Success/失败 Danger/进行中 Warning）；页头/表格全换 Space 与字阶；表格 7 处 FontSize(12) 拆除；阶段点→Space(1.75)；⌘R | 259 tests green, vet 干净 |
+| 9 | snapshots 全五维：`stateColor`/`failColor` 硬编码→主题语义（加 *ui.Theme 参数）；页头/表格/详情/SLM 区/三个对话框按钮行全换 Space 与字阶；表格+SLM 表共 9 处 FontSize(12) 拆除；6 处错误文案→`t.Danger`；⌘R 刷新（repos+snaps+slm 同按钮逻辑） | 259 tests green, vet 干净 |
 
 ## 截图变化点
 
@@ -54,6 +55,7 @@
 - 轮 6（全部 11 张刷新，变化集中在 05-nodes）：表格正文走默认 13；详情面板 JSON 换 mono 等宽字体（indices 详情同步）
 - 轮 7（全部 11 张刷新，变化集中在 06-shards）：表格正文走默认 13；状态点颜色走主题语义（深色自动变体）；reroute 条间距随主题
 - 轮 8（全部 11 张刷新；recovery 页不在截图清单，变化同 shards 套路——表格正文/阶段点/间距全部主题化）
+- 轮 9（全部 11 张刷新，变化集中在 07-snapshots）：错误文案主题红；表格/SLM 正文走默认 13；详情与 SLM 区间距随主题（截图里 mock server 对 _snapshot 返回数组导致的 decode 错误为既有测试数据形态，非本轮回归）
 
 ## 悬念（后续轮处理）
 
