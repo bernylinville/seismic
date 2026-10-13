@@ -75,12 +75,14 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		m.load(h)
 	}
 	t := c.Theme()
+	// ⌘R 刷新，系统习惯。
+	c.OnShortcut(ui.Cmd, ui.KeyR, func() { m.load(h) })
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "快照仓库")).FontSize(19).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "{0} 个仓库", len(m.rows))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "快照仓库")).FontSize(kit.SizeTitle(t)).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 个仓库", len(m.rows))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
 			ui.SearchField(c, &m.filter).Placeholder(kit.Tr(h.Lang(), "筛选仓库…")).Width(200)
@@ -95,13 +97,13 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		})
 
 		if m.actionErr != "" {
-			ui.Text(c, m.actionErr).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 20, 4, 20)
+			ui.Text(c, m.actionErr).FontSize(kit.SizeCaption(t)).TextColor(t.Danger).Padding(0, t.Space(5), t.Space(1), t.Space(5))
 		}
 		if m.actionMsg != "" {
-			ui.Text(c, m.actionMsg).FontSize(12).TextColor(t.TextMuted).Padding(0, 20, 4, 20)
+			ui.Text(c, m.actionMsg).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted).Padding(0, t.Space(5), t.Space(1), t.Space(5))
 		}
 		if client == nil {
-			ui.Text(c, kit.Tr(h.Lang(), "未连接集群")).TextColor(t.TextMuted).Padding(0, 16)
+			ui.Text(c, kit.Tr(h.Lang(), "未连接集群")).TextColor(t.TextMuted).Padding(0, t.Space(4))
 			return
 		}
 		if kit.StateText(c, h.Lang(), m.loading && !m.loadedOnce, m.err, len(m.visibleRows()) == 0, kit.Tr(h.Lang(), "还没有仓库")) {
@@ -120,11 +122,11 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			case 0:
 				ui.Text(c, r.Name).SingleLine()
 			case 1:
-				ui.Text(c, r.Type).FontSize(12)
+				ui.Text(c, r.Type)
 			case 2:
-				ui.Text(c, settingsSummary(r.Settings)).FontSize(12).TextColor(t.TextMuted).SingleLine()
+				ui.Text(c, settingsSummary(r.Settings)).TextColor(t.TextMuted).SingleLine()
 			case 3:
-				ui.Row(c).Gap(6).Children(func() {
+				ui.Row(c).Gap(t.Space(1.5)).Children(func() {
 					if ui.Button(c, kit.Tr(h.Lang(), "验证")).Clicked() {
 						m.actionErr, m.actionMsg = "", ""
 						m.verify(h, r.Name)
@@ -134,7 +136,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 					}
 				})
 			}
-		}).Grow(1).Padding(0, 12, 0, 12)
+		}).Grow(1).Padding(0, t.Space(3), 0, t.Space(3))
 		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
 		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
 		m.prefs.Sync(h, "repositories", listState.Columns)
@@ -166,9 +168,9 @@ func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
 			}).Description(kit.Tr(h.Lang(), "仓库 settings，如 {0}", strings.Join(strings.Fields(settingsTemplate(m.newType)), " ")))
 		})
 		if m.newErr != "" {
-			ui.Text(c, m.newErr).FontSize(12).TextColor(ui.Hex("#d64545"))
+			ui.Text(c, m.newErr).FontSize(kit.SizeCaption(t)).TextColor(t.Danger)
 		}
-		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).Justify(ui.End).Children(func() {
 			if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 				m.showNew = false
 			}
@@ -183,11 +185,11 @@ func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
 		ui.Modal(c, &m.deleteConfirm, func() {
 			ui.Text(c, kit.Tr(h.Lang(), "删除仓库")).Bold()
 			ui.Text(c, kit.Tr(h.Lang(), "删除后快照会失效，确定删 {0}？", name)).TextColor(t.TextMuted)
-			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+			ui.Row(c).Gap(t.Space(2)).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.deleteName, m.deleteConfirm = "", false
 				}
-				if ui.PrimaryButton(c, kit.Tr(h.Lang(), "删除")).Clicked() {
+				if kit.DangerButton(c, kit.Tr(h.Lang(), "删除")).Clicked() {
 					m.delete(h)
 				}
 			})
