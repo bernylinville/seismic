@@ -1,5 +1,9 @@
 services:
   es8:
+    # Perf fixture (see docs/loop/perf.md): up -d && go run ./cmd/perfseed
+    # seeds 5k indices + wide mapping + 10k hits; then run the env-gated
+    # acceptance: SEISMIC_ES8=http://127.0.0.1:9200 SEISMIC_ES8_USER=elastic
+    # SEISMIC_ES8_PASS=... go test ./internal/es/ -run TestPerfAcceptance -v
     image: docker.elastic.co/elasticsearch/elasticsearch:8.19.6
     container_name: seismic-es8
     environment:

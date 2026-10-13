@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"time"
 	"sync"
 	"testing"
 
@@ -296,5 +297,40 @@ func TestMappingCache(t *testing.T) {
 	}
 	if len(m.mappingCache) > mappingCacheMax {
 		t.Fatalf("cache size = %d, want <= %d", len(m.mappingCache), mappingCacheMax)
+	}
+}
+
+// TestPerfSmoke10kHitsApply 锁阈值：10k hits 解码 + 转表格行 < 2s。
+func TestPerfSmoke10kHitsApply(t *testing.T) {
+	var body []byte
+	for i := 0; i < 10000; i++ {
+		body = append(body, fmt.Appendf(nil,
+			`{"_index":"perf-hits","_id":"h%06d","_score":1.5,"_source":{"@timestamp":"2026-10-13T07:06:21Z","level":"info","host":"node-%d","service":"svc-%d","cpu":%.2f,"msg":"hit %d for the 10k-render benchmark"}},`,
+			i, i%7, i%13, float64(i%100)/7.0, i)...)
+	}
+	body = body[:len(body)-1]
+	payload := []byte(`{"took":42,"hits":{"total":{"value":10000},"hits":[` + string(body) + `]}}`)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write(payload)
+	}))
+	t.Cleanup(srv.Close)
+	client, err := es.New(srv.URL, es.Auth{Type: es.AuthNone})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	start := time.Now()
+	res := &searchResponse{}
+	if _, err := client.SearchInto(context.Background(), map[string]any{}, nil, nil, res); err != nil {
+		t.Fatal(err)
+	}
+	m := New()
+	m.applyResults(res)
+	if el := time.Since(start); el > 2*time.Second {
+		t.Fatalf("10k hits 解码+建表 %s > 2s", el)
+	}
+	if len(m.rows) != 10000 {
+		t.Fatalf("rows = %d, want 10000", len(m.rows))
 	}
 }

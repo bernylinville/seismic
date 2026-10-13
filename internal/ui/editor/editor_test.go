@@ -636,3 +636,21 @@ func TestEditorInsertCap(t *testing.T) {
 		t.Error("refused insert should set a notice")
 	}
 }
+
+// TestPerfSmokeMegaJSONOpen 锁阈值：3 MB 合法 JSON 打开（SetText 含一次
+// 强制校验）< 1s。
+func TestPerfSmokeMegaJSONOpen(t *testing.T) {
+	doc := bigJSON(3 << 20)
+	start := time.Now()
+	e := New()
+	e.SetText(doc)
+	if el := time.Since(start); el > time.Second {
+		t.Fatalf("3MB JSON 打开 %s > 1s", el)
+	}
+	if e.status.err != nil {
+		t.Fatalf("3MB seed doc should be valid: %v", e.status.err)
+	}
+	if !e.status.degraded {
+		t.Error("3MB doc should be in degraded mode")
+	}
+}
