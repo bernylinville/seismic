@@ -9,7 +9,7 @@
 - [x] 2. 减拷贝：json.Decoder 直解 resp.Body，消除 ReadAll+Unmarshal 双份内存
 - [x] 3. 表格过滤/排序缓存：indices_state.go 与 shards 的 visibleRows() 改脏标记，数据变化时算一次
 - [x] 4. 编辑器防护：文档大小上限、Validate 防抖、超大文档降级提示
-- [ ] 5. REST 控制台大响应：>1MB 跳过全量 json.Indent，分块或按需格式化
+- [x] 5. REST 控制台大响应：>1MB 跳过全量 json.Indent，分块或按需格式化
 - [ ] 6. 请求取消：UI 层传真实 ctx，切页/切连接/重查询时取消在途请求
 - [ ] 7. mapping 拉取异步化 + 按 pattern 缓存，移出搜索点击同步路径（ui/search/search.go:352-411）
 - [ ] 8. 造数+benchmark：es8 灌 5k 索引 + 10k hits；Go benchmark（visibleRows、tokenizer、client 解码）+ smoke 阈值断言
@@ -28,3 +28,4 @@
 | 2 | RequestJSON 流式直解（计数 limitReader，超限检查先于解码错误）；Into 变体 ×17；迁移全部 25 个 resp.JSON/resp.Body 站点（search/indices/shards/nodes/recovery/snapshots/repos/overview/deps/roles/users/settings/templates/conn）；顺带消除请求体发送时的整串拷贝 | 244 tests green, vet 干净, commit f16f15c |
 | 3 | visibleRows 缓存：输入快照比对（filter/hide/sort 值比较 + rows 切片头身份比较），indices/shards/nodes 三表同改（nodes 与任务点名的两处同模式）；每帧 2-3 次调用只算一次；缓存复用/失效测试 ×3 | 247 tests green, vet 干净, commit ac12995 |
 | 4 | 编辑器三层防护：8MiB 硬上限（SetText 拒载/插入拒增长+状态栏提示）；1MiB 降级（停逐键校验/高亮/补全，打开时强制校验一次）；64KiB 起防抖（200ms 一次）。框架限制记录：v0.4.8 文本输入绑定为 string 每帧物化，buffer 版 TextAreaBuffer 需整体替换自定义编辑器 | 251 tests green, vet 干净, commit 2ae6e5f |
+| 5 | REST 大响应分级：>1MiB 跳过全量 json.Indent（省 1.5-2× 缩进副本），原样显示 + 双语提示行；小响应照常缩进；lang 主线程捕获避免 worker 竞态 | 252 tests green, vet 干净, commit 4fc120e |
