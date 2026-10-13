@@ -28,7 +28,7 @@
 | repositories | ✅ | ✅ | ✅ | ✅ | ✅ |
 | templates | ✅ | ✅ | ✅ | ✅ | ✅ |
 | settings | ✅ | ✅ | ✅ | ✅ | ✅ |
-| users | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| users | ✅ | ✅ | ✅ | ✅ | ✅ |
 | roles | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 
 ## 每轮结果
@@ -47,6 +47,7 @@
 | 10 | repositories 全五维：页头/表格/对话框全换 Space 与字阶；2 处错误红→`t.Danger`；表格 2 处 FontSize(12) 拆除；⌘R；新增 `kit.DangerButton`（主题 Danger 填充的破坏性确认按钮，mygo v0.4.8 无内建变体）并用于删除仓库模态（原为蓝色 PrimaryButton） | 259 tests green, vet 干净 |
 | 11 | templates 全五维：未连接态页头对齐全局模式（原裸 20px）；页头/Tabs/表格/详情/两对话框全换 Space 与字阶；3 处错误红→`t.Danger`；详情 JSON→mono+`kit.SizeMono`；删除确认按钮→`kit.DangerButton`（原为普通灰按钮）；⌘R | 259 tests green, vet 干净 |
 | 12 | settings 全五维：未连接态页头对齐全局模式；页头/表格/编辑对话框全换 Space 与字阶；`sectionColor` 硬编码→主题语义（transient Warning/持久 Success）；错误/警告→`t.Danger`；「确认修改」（集群级危险操作）→`kit.DangerButton`；⌘R | 259 tests green, vet 干净 |
+| 13 | users 全五维：页头/表格/三个对话框全换 Space 与字阶（对话框标题 16→17 统一）；操作消息错误色→`t.Danger`；表格 7 处 FontSize(12) 拆除；删除按钮硬编码 `Background(#d64545)+白字`→`kit.DangerButton`（悬念清单项兑现）；⌘R | 259 tests green, vet 干净 |
 
 ## 截图变化点
 
@@ -62,6 +63,7 @@
 - 轮 10（全部 11 张刷新；repositories 页不在截图清单——同 snapshots 套路，删除确认按钮变系统式红色破坏性按钮）
 - 轮 11（全部 11 张刷新；templates 页不在截图清单——同套路，详情 JSON 变 mono、删除确认变红色破坏性按钮）
 - 轮 12（全部 11 张刷新；09-settings 无数据行可显——页头与空态走新字阶，transient/持久分区色待实机数据验证）
+- 轮 13（全部 11 张刷新；08-users 表格正文走默认 13，其余对话框变化需交互触发）
 
 ## 悬念（后续轮处理）
 

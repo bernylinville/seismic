@@ -23,12 +23,14 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	t := c.Theme()
 	showEnabled := es.SupportsUserEnabledInBody(es.MajorVersion(h.Version()))
 	showDeprecated := es.SupportsSecurityDeprecatedMetadata(h.Version())
+	// ⌘R 刷新，系统习惯。
+	c.OnShortcut(ui.Cmd, ui.KeyR, func() { m.load(h) })
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "用户")).FontSize(19).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "{0} 个用户", len(m.rows))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "用户")).FontSize(kit.SizeTitle(t)).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 个用户", len(m.rows))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
 			ui.SearchField(c, &m.filter).Placeholder(kit.Tr(h.Lang(), "筛选用户…")).Width(200)
@@ -44,9 +46,9 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		if m.actionMsg != "" {
 			color := t.Text
 			if m.actionErr {
-				color = ui.Hex("#d64545")
+				color = t.Danger
 			}
-			ui.Text(c, m.actionMsg).FontSize(12).TextColor(color).Padding(0, 20, 4, 20)
+			ui.Text(c, m.actionMsg).FontSize(kit.SizeCaption(t)).TextColor(color).Padding(0, t.Space(5), t.Space(1), t.Space(5))
 		}
 		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "还没有用户")) {
 			return
@@ -78,7 +80,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		state := ui.ListState{Selected: &m.selected, Sort: &m.sort, Columns: m.prefs.Frame(h, "users")}
 		table := ui.Table(c, &state, cols, len(rows), func(row, col int) {
 			userCell(c, m, rows[row], kinds[col], h.Lang())
-		}).Grow(1).Padding(0, 12, 0, 12)
+		}).Grow(1).Padding(0, t.Space(3), 0, t.Space(3))
 		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
 		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
 		m.prefs.Sync(h, "users", state.Columns)
@@ -127,19 +129,19 @@ func userCell(c *ui.Context, m *Module, u userRow, col cellCol, lang string) {
 			}
 		})
 	case colRoles:
-		ui.Text(c, strings.Join(u.Roles, ", ")).FontSize(12).SingleLine().TextColor(t.TextMuted)
+		ui.Text(c, strings.Join(u.Roles, ", ")).SingleLine().TextColor(t.TextMuted)
 	case colFullName:
-		ui.Text(c, u.FullName).FontSize(12).SingleLine()
+		ui.Text(c, u.FullName).SingleLine()
 	case colEmail:
-		ui.Text(c, u.Email).FontSize(12).SingleLine()
+		ui.Text(c, u.Email).SingleLine()
 	case colEnabled:
-		ui.Text(c, kit.Tr(lang, boolText(u.Enabled))).FontSize(12)
+		ui.Text(c, kit.Tr(lang, boolText(u.Enabled)))
 	case colReserved:
 		if u.Reserved {
-			ui.Text(c, kit.Tr(lang, "是")).FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(lang, "是")).TextColor(t.TextMuted)
 		}
 	case colDeprecated:
-		txt := ui.Text(c, kit.Tr(lang, boolText(u.Deprecated))).FontSize(12)
+		txt := ui.Text(c, kit.Tr(lang, boolText(u.Deprecated)))
 		if u.DeprecatedReason != "" {
 			txt.Tooltip(u.DeprecatedReason)
 		}
@@ -172,8 +174,8 @@ func (m *Module) openPasswordDialog(u userRow) {
 // not the Elasticsearch native one elasticvue's user management needs.
 func unsupportedNotice(c *ui.Context, lang string) {
 	t := c.Theme()
-	ui.Column(c).Fill().AlignItems(ui.Center).Justify(ui.Center).Gap(8).Children(func() {
-		ui.Text(c, kit.Tr(lang, "用户")).FontSize(19).Bold()
+	ui.Column(c).Fill().AlignItems(ui.Center).Justify(ui.Center).Gap(t.Space(2)).Children(func() {
+		ui.Text(c, kit.Tr(lang, "用户")).FontSize(kit.SizeTitle(t)).Bold()
 		ui.Text(c, kit.Tr(lang, "OpenSearch 不支持原生用户/角色管理")).TextColor(t.TextMuted)
 	})
 }
@@ -205,8 +207,8 @@ func (m *Module) userDialog(h kit.ModuleHost, c *ui.Context, edit bool) {
 		title, submit = kit.Tr(h.Lang(), "编辑用户"), kit.Tr(h.Lang(), "保存")
 	}
 	ui.Modal(c, &m.dialogOpen, func() {
-		ui.Column(c).Width(440).Padding(20).Gap(12).Children(func() {
-			ui.Text(c, title).FontSize(16).Bold()
+		ui.Column(c).Width(440).Padding(c.Theme().Space(5)).Gap(c.Theme().Space(3)).Children(func() {
+			ui.Text(c, title).FontSize(kit.SizeTitle(c.Theme())).Bold()
 
 			var nameErr, passErr, rolesErr string
 			if m.submitTried {
@@ -250,7 +252,7 @@ func (m *Module) userDialog(h kit.ModuleHost, c *ui.Context, edit bool) {
 				})
 			}
 
-			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+			ui.Row(c).Gap(c.Theme().Space(2)).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.dialogOpen = false
 				}
@@ -280,8 +282,8 @@ func passwordHint(edit bool, lang string) string {
 func (m *Module) passwordDialog(h kit.ModuleHost, c *ui.Context) {
 	f := &m.form
 	ui.Modal(c, &m.dialogOpen, func() {
-		ui.Column(c).Width(440).Padding(20).Gap(12).Children(func() {
-			ui.Text(c, kit.Tr(h.Lang(), "修改密码")).FontSize(16).Bold()
+		ui.Column(c).Width(440).Padding(c.Theme().Space(5)).Gap(c.Theme().Space(3)).Children(func() {
+			ui.Text(c, kit.Tr(h.Lang(), "修改密码")).FontSize(kit.SizeTitle(c.Theme())).Bold()
 			ui.Text(c, f.Username).TextColor(c.Theme().TextMuted)
 
 			var passErr string
@@ -292,7 +294,7 @@ func (m *Module) passwordDialog(h kit.ModuleHost, c *ui.Context) {
 				ui.TextInput(c, &f.Password).Password().AutoFocus()
 			}).Error(passErr)
 
-			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+			ui.Row(c).Gap(c.Theme().Space(2)).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.dialogOpen = false
 				}
@@ -311,14 +313,14 @@ func (m *Module) passwordDialog(h kit.ModuleHost, c *ui.Context) {
 func (m *Module) confirmDialog(h kit.ModuleHost, c *ui.Context) {
 	t := c.Theme()
 	ui.Modal(c, &m.confirmOpen, func() {
-		ui.Column(c).Width(380).Padding(20).Gap(12).Children(func() {
-			ui.Text(c, kit.Tr(h.Lang(), "删除用户")).FontSize(16).Bold()
+		ui.Column(c).Width(380).Padding(t.Space(5)).Gap(t.Space(3)).Children(func() {
+			ui.Text(c, kit.Tr(h.Lang(), "删除用户")).FontSize(kit.SizeTitle(t)).Bold()
 			ui.Text(c, kit.Tr(h.Lang(), "删了就恢复不了，确定删 {0}？", m.confirmName)).TextColor(t.TextMuted)
-			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+			ui.Row(c).Gap(t.Space(2)).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.confirmOpen = false
 				}
-				if ui.Button(c, kit.Tr(h.Lang(), "删除")).Background(ui.Hex("#d64545")).TextColor(ui.Hex("#ffffff")).Disabled(m.busy).Clicked() {
+				if kit.DangerButton(c, kit.Tr(h.Lang(), "删除")).Disabled(m.busy).Clicked() {
 					m.deleteUser(h)
 				}
 			})
