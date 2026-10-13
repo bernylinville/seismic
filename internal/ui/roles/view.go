@@ -22,12 +22,14 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	}
 	t := c.Theme()
 	showDescription := es.SupportsRoleDescription(h.Version())
+	// ⌘R 刷新，系统习惯。
+	c.OnShortcut(ui.Cmd, ui.KeyR, func() { m.load(h) })
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "角色")).FontSize(19).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "{0} 个角色", len(m.rows))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "角色")).FontSize(kit.SizeTitle(t)).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 个角色", len(m.rows))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
 			ui.SearchField(c, &m.filter).Placeholder(kit.Tr(h.Lang(), "筛选角色…")).Width(200)
@@ -43,9 +45,9 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		if m.actionMsg != "" {
 			color := t.Text
 			if m.actionErr {
-				color = ui.Hex("#d64545")
+				color = t.Danger
 			}
-			ui.Text(c, m.actionMsg).FontSize(12).TextColor(color).Padding(0, 20, 4, 20)
+			ui.Text(c, m.actionMsg).FontSize(kit.SizeCaption(t)).TextColor(color).Padding(0, t.Space(5), t.Space(1), t.Space(5))
 		}
 		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "还没有角色")) {
 			return
@@ -72,7 +74,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		state := ui.ListState{Selected: &m.selected, Sort: &m.sort, Columns: m.prefs.Frame(h, "roles")}
 		table := ui.Table(c, &state, cols, len(rows), func(row, col int) {
 			roleCell(c, m, rows[row], kinds[col], h.Lang())
-		}).Grow(1).Padding(0, 12, 0, 12)
+		}).Grow(1).Padding(0, t.Space(3), 0, t.Space(3))
 		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
 		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
 		m.prefs.Sync(h, "roles", state.Columns)
@@ -117,14 +119,14 @@ func roleCell(c *ui.Context, m *Module, r roleRow, col cellCol, lang string) {
 			}
 		})
 	case colDescription:
-		ui.Text(c, r.Description).FontSize(12).SingleLine().TextColor(t.TextMuted)
+		ui.Text(c, r.Description).SingleLine().TextColor(t.TextMuted)
 	case colIndices:
-		ui.Text(c, r.IndicesOverview).FontSize(12).SingleLine().TextColor(t.TextMuted)
+		ui.Text(c, r.IndicesOverview).SingleLine().TextColor(t.TextMuted)
 	case colCluster:
-		ui.Text(c, strings.Join(r.Cluster, ", ")).FontSize(12).SingleLine()
+		ui.Text(c, strings.Join(r.Cluster, ", ")).SingleLine()
 	case colReserved:
 		if r.Reserved {
-			ui.Text(c, kit.Tr(lang, "是")).FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(lang, "是")).TextColor(t.TextMuted)
 		}
 	}
 }
@@ -132,11 +134,11 @@ func roleCell(c *ui.Context, m *Module, r roleRow, col cellCol, lang string) {
 // detailView shows the chosen role's raw JSON below the table.
 func (m *Module) detailView(c *ui.Context, rows []roleRow, lang string) {
 	t := c.Theme()
-	ui.Column(c).Height(220).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
-		Background(t.Surface).Padding(12, 16, 12, 16).Gap(6).Children(func() {
-		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+	ui.Column(c).Height(t.Space(55)).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
+		Background(t.Surface).Padding(t.Space(3), t.Space(4), t.Space(3), t.Space(4)).Gap(t.Space(1.5)).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, m.detailName).Bold()
-			ui.Text(c, kit.Tr(lang, "· JSON")).TextColor(t.TextMuted).FontSize(12)
+			ui.Text(c, kit.Tr(lang, "· JSON")).TextColor(t.TextMuted).FontSize(kit.SizeCaption(t))
 			ui.Spacer(c)
 			if ui.Button(c, kit.Tr(lang, "关闭")).Clicked() {
 				m.detailName = ""
@@ -144,7 +146,7 @@ func (m *Module) detailView(c *ui.Context, rows []roleRow, lang string) {
 		})
 		for _, r := range rows {
 			if r.Name == m.detailName {
-				ui.Text(c, r.JSON).FontSize(12).Grow(1)
+				ui.Text(c, r.JSON).Font("monospace").FontSize(kit.SizeMono(t)).Grow(1)
 			}
 		}
 	})
@@ -154,8 +156,8 @@ func (m *Module) detailView(c *ui.Context, rows []roleRow, lang string) {
 // not the Elasticsearch native one elasticvue's role management needs.
 func unsupportedNotice(c *ui.Context, lang string) {
 	t := c.Theme()
-	ui.Column(c).Fill().AlignItems(ui.Center).Justify(ui.Center).Gap(8).Children(func() {
-		ui.Text(c, kit.Tr(lang, "角色")).FontSize(19).Bold()
+	ui.Column(c).Fill().AlignItems(ui.Center).Justify(ui.Center).Gap(t.Space(2)).Children(func() {
+		ui.Text(c, kit.Tr(lang, "角色")).FontSize(kit.SizeTitle(t)).Bold()
 		ui.Text(c, kit.Tr(lang, "OpenSearch 不支持原生用户/角色管理")).TextColor(t.TextMuted)
 	})
 }
@@ -186,8 +188,8 @@ func (m *Module) roleDialog(h kit.ModuleHost, c *ui.Context, edit bool) {
 	}
 	version := h.Version()
 	ui.Modal(c, &m.dialogOpen, func() {
-		ui.Column(c).Width(520).Padding(20).Gap(12).Children(func() {
-			ui.Text(c, title).FontSize(16).Bold()
+		ui.Column(c).Width(520).Padding(c.Theme().Space(5)).Gap(c.Theme().Space(3)).Children(func() {
+			ui.Text(c, title).FontSize(kit.SizeTitle(c.Theme())).Bold()
 
 			var nameErr, indicesErr string
 			if m.submitTried {
@@ -222,7 +224,7 @@ func (m *Module) roleDialog(h kit.ModuleHost, c *ui.Context, edit bool) {
 				ui.TextInput(c, &f.RunAs)
 			}).Description(kit.Tr(h.Lang(), "代替的用户，逗号分隔"))
 
-			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+			ui.Row(c).Gap(c.Theme().Space(2)).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.dialogOpen = false
 				}
@@ -255,14 +257,14 @@ func indicesHint(version, lang string) string {
 func (m *Module) confirmDialog(h kit.ModuleHost, c *ui.Context) {
 	t := c.Theme()
 	ui.Modal(c, &m.confirmOpen, func() {
-		ui.Column(c).Width(380).Padding(20).Gap(12).Children(func() {
-			ui.Text(c, kit.Tr(h.Lang(), "删除角色")).FontSize(16).Bold()
+		ui.Column(c).Width(380).Padding(t.Space(5)).Gap(t.Space(3)).Children(func() {
+			ui.Text(c, kit.Tr(h.Lang(), "删除角色")).FontSize(kit.SizeTitle(t)).Bold()
 			ui.Text(c, kit.Tr(h.Lang(), "删了就恢复不了，确定删 {0}？", m.confirmName)).TextColor(t.TextMuted)
-			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+			ui.Row(c).Gap(t.Space(2)).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.confirmOpen = false
 				}
-				if ui.Button(c, kit.Tr(h.Lang(), "删除")).Background(ui.Hex("#d64545")).TextColor(ui.Hex("#ffffff")).Disabled(m.busy).Clicked() {
+				if kit.DangerButton(c, kit.Tr(h.Lang(), "删除")).Disabled(m.busy).Clicked() {
 					m.deleteRole(h)
 				}
 			})
