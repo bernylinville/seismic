@@ -82,7 +82,8 @@ func StateText(c *ui.Context, lang string, loading bool, err error, empty bool, 
 			ui.Text(c, Tr(lang, "已取消（切换了连接或被新查询取代）")).TextColor(t.TextMuted)
 			return true
 		}
-		ui.Column(c).Grow(1).Padding(t.Space(4)).Children(func() {
+		ui.Column(c).Grow(1).Padding(t.Space(4)).
+			Transition(ui.ElementTransition{Enter: &ui.Motion{Y: 4}}).Children(func() {
 			ui.Text(c, Tr(lang, "请求失败")).Bold().TextColor(t.Danger)
 			ui.Text(c, ErrMessage(err)).TextColor(t.TextMuted).FontSize(SizeCaption(t))
 		})

@@ -166,7 +166,7 @@ func (a *App) View(c *ui.Context) {
 		a.welcome(c)
 		return
 	}
-	ui.Column(c).Fill().Children(func() {
+	ui.Column(c).Fill().Transition(pageEnter).Children(func() {
 		a.toolbar(c)
 		ui.Row(c).Grow(1).AlignItems(ui.Stretch).Children(func() {
 			a.sidebar(c)
@@ -261,12 +261,19 @@ func (a *App) page(c *ui.Context, r *ui.Route) {
 	for _, mod := range modules {
 		if r.Match(mod.Path) {
 			r.Title(kit.Tr(a.lang, mod.Label))
-			a.modulePage(c, mod)
+			// 模块切换：新页面上浮淡入；系统「减少动态效果」时 mygo 自动停用位移。
+			ui.Column(c).Key(mod.Path).Fill().Transition(pageEnter).Children(func() {
+				a.modulePage(c, mod)
+			})
 			return
 		}
 	}
 	ui.Text(c, kit.Tr(a.lang, "找不到这个页面"))
 }
+
+// pageEnter 是页面进场过渡：8px 上浮 + 淡入，默认 200ms EaseOut；
+// 页面 Key 稳定，同页刷新不会重放。
+var pageEnter = ui.ElementTransition{Enter: &ui.Motion{Y: 8}}
 
 func (a *App) statusbar(c *ui.Context) {
 	t := c.Theme()
