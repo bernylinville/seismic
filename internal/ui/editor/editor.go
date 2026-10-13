@@ -10,6 +10,8 @@ import (
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
+
+	"seismic/internal/ui/kit"
 )
 
 // 布局常量（DIP）。
@@ -26,8 +28,8 @@ const (
 )
 
 // palette 从主题派生的 token 配色（暗色可读）。
-// 键是任务定死的 teal；字符串用主题 Success 绿，数字/字面量在
-// 暗色下换成更亮的变体，结构符号用次级文本色。
+// 键跟随系统 accent，字符串用主题 Success 绿，数字/字面量在暗色下
+// 换成更亮的变体，结构符号用次级文本色。
 type palette struct {
 	key, str, num, lit, punct, text, bracket ui.Color
 }
@@ -40,7 +42,7 @@ func themePalette(t *ui.Theme) palette {
 		lit = ui.Hex("#d9a35c")
 	}
 	return palette{
-		key:     ui.Hex("#0e8c7f"),
+		key:     t.Accent,
 		str:     t.Success,
 		num:     num,
 		lit:     lit,
@@ -878,23 +880,23 @@ func (e *Editor) View(c *ui.Context) {
 				HandleTextInput(e).HandleInput(e.handleInput).
 				Draw(e.drawContent).DrawOver(e.drawPopup)
 		})
-		ui.Row(c.Key("status")).Padding(6, 10).Gap(12).Children(func() {
+		ui.Row(c.Key("status")).Padding(t.Space(1.5), t.Space(2.5)).Gap(t.Space(3)).Children(func() {
 			ui.Text(c, fmt.Sprintf("%d 行 · %d 字符", e.status.lines, e.status.chars)).
-				FontSize(12).TextColor(t.TextMuted)
+				FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			switch {
 			case e.status.notice != "":
-				ui.Text(c, e.status.notice).FontSize(12).TextColor(t.Danger)
+				ui.Text(c, e.status.notice).FontSize(kit.SizeCaption(t)).TextColor(t.Danger)
 			case e.status.chars == 0:
-				ui.Text(c, "空").FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, "空").FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			case e.status.err != nil:
 				ui.Text(c, fmt.Sprintf("第 %d 行 第 %d 列：%s",
 					e.status.pos.Line, e.status.pos.Col, jsonErrText(e.status.err))).
-					FontSize(12).TextColor(t.Danger)
+					FontSize(kit.SizeCaption(t)).TextColor(t.Danger)
 			case e.status.degraded:
 				ui.Text(c, "超大文档：已停用实时校验与语法高亮").
-					FontSize(12).TextColor(t.TextMuted)
+					FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			default:
-				ui.Text(c, "JSON 有效").FontSize(12).TextColor(t.Success)
+				ui.Text(c, "JSON 有效").FontSize(kit.SizeCaption(t)).TextColor(t.Success)
 			}
 		})
 	})

@@ -49,6 +49,7 @@
 | 12 | settings 全五维：未连接态页头对齐全局模式；页头/表格/编辑对话框全换 Space 与字阶；`sectionColor` 硬编码→主题语义（transient Warning/持久 Success）；错误/警告→`t.Danger`；「确认修改」（集群级危险操作）→`kit.DangerButton`；⌘R | 259 tests green, vet 干净 |
 | 13 | users 全五维：页头/表格/三个对话框全换 Space 与字阶（对话框标题 16→17 统一）；操作消息错误色→`t.Danger`；表格 7 处 FontSize(12) 拆除；删除按钮硬编码 `Background(#d64545)+白字`→`kit.DangerButton`（悬念清单项兑现）；⌘R | 259 tests green, vet 干净 |
 | 14 | roles 全五维：与 users 同构同套路——页头/表格/详情/两对话框全换 Space 与字阶；详情 JSON→mono+`kit.SizeMono`；操作消息错误色→`t.Danger`；删除按钮硬编码→`kit.DangerButton`（最后一个兑现）；⌘R | 259 tests green, vet 干净 |
+| 15 | editor 调色板校准（悬念清单最后一项）：语法高亮 key 色旧 teal `#0e8c7f`→`t.Accent`（跟随系统 accent 与深浅模式，全链路无 teal 残留）；str 已是 `t.Success`、num/lit 保留明暗双档手调值（主题无数值/字面量语义位）；状态栏 7 处 `FontSize(12)`→`kit.SizeCaption`、`Padding(6,10)/Gap(12)`→Space 单位 | 259 tests green, vet 干净 |
 
 ## 截图变化点
 
@@ -66,9 +67,12 @@
 - 轮 12（全部 11 张刷新；09-settings 无数据行可显——页头与空态走新字阶，transient/持久分区色待实机数据验证）
 - 轮 13（全部 11 张刷新；08-users 表格正文走默认 13，其余对话框变化需交互触发）
 - 轮 14（全部 11 张刷新；roles 页不在截图清单——同 users 套路）
+- 轮 15（全部 11 张刷新，变化集中在 03-search 的编辑器）：JSON 键名高亮 teal→系统蓝 accent（与侧边栏选中色同源）；编辑器下方状态栏字号 12→11 caption、间距随主题（「JSON 有效」仍为主题绿）
 
 ## 悬念（后续轮处理）
 
-- editor.go:43 语法高亮 key 色仍为旧 teal `#0e8c7f`——editor 模块轮统一校准调色板
-- 全模块散落 `#d64545/#2f9e63/#d9a406` 错误/健康色硬编码（见各模块轮）
-- users/roles 删除按钮 `Background(#d64545)` 自绘破坏性按钮——控件轮换系统语义（Danger 变体或 Confirm 按钮）
+- ~~editor.go:43 语法高亮 key 色仍为旧 teal `#0e8c7f`~~（轮 15 清零：→`t.Accent`）
+- ~~全模块散落 `#d64545/#2f9e63/#d9a406` 错误/健康色硬编码~~（各模块轮已清零）
+- ~~users/roles 删除按钮 `Background(#d64545)` 自绘破坏性按钮~~（轮 10/13/14 已换 `kit.DangerButton`）
+
+悬念清单已全部清零；剩壳层 控件/间距/交互 三个格子（下轮）。
