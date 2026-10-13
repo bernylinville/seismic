@@ -344,11 +344,17 @@ func (m *Module) load(h kit.ModuleHost) {
 	h.Load(
 		func() { m.loading = true },
 		func() func() {
-			legacyRows, legacyErr := fetchTemplates(func() (*es.Response, error) { return client.Template(context.Background()) })
+			legacyRows, legacyErr := fetchTemplates(func(out any) error {
+				_, err := client.TemplateInto(context.Background(), out)
+				return err
+			})
 			var compRows []templateRow
 			var compErr error
 			if m.composable {
-				compRows, compErr = fetchComposable(func() (*es.Response, error) { return client.IndexTemplate(context.Background()) })
+				compRows, compErr = fetchComposable(func(out any) error {
+					_, err := client.IndexTemplateInto(context.Background(), out)
+					return err
+				})
 			}
 			return func() {
 				m.loading = false
@@ -369,13 +375,9 @@ func (m *Module) load(h kit.ModuleHost) {
 }
 
 // fetchTemplates parses the legacy _template response: a name→definition map.
-func fetchTemplates(get func() (*es.Response, error)) ([]templateRow, error) {
-	resp, err := get()
-	if err != nil {
-		return nil, err
-	}
+func fetchTemplates(get func(out any) error) ([]templateRow, error) {
 	var defs map[string]json.RawMessage
-	if err := resp.JSON(&defs); err != nil {
+	if err := get(&defs); err != nil {
 		return nil, err
 	}
 	rows := make([]templateRow, 0, len(defs))
@@ -398,11 +400,7 @@ func fetchTemplates(get func() (*es.Response, error)) ([]templateRow, error) {
 }
 
 // fetchComposable parses the _index_template response.
-func fetchComposable(get func() (*es.Response, error)) ([]templateRow, error) {
-	resp, err := get()
-	if err != nil {
-		return nil, err
-	}
+func fetchComposable(get func(out any) error) ([]templateRow, error) {
 	var body struct {
 		IndexTemplates []struct {
 			Name          string   `json:"name"`
@@ -410,7 +408,7 @@ func fetchComposable(get func() (*es.Response, error)) ([]templateRow, error) {
 			IndexPatterns []string `json:"index_patterns"`
 		} `json:"index_templates"`
 	}
-	if err := resp.JSON(&body); err != nil {
+	if err := get(&body); err != nil {
 		return nil, err
 	}
 	rows := make([]templateRow, 0, len(body.IndexTemplates))

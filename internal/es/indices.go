@@ -161,3 +161,27 @@ func (c *Client) IndexForcemerge(ctx context.Context, indices []string) ([]*Resp
 		return c.Request(ctx, "POST", cleanJoin(batch)+"/_forcemerge", nil)
 	})
 }
+
+// CatIndicesInto streams the cat indices reply straight into out.
+func (c *Client) CatIndicesInto(ctx context.Context, params map[string]any, filter string, out any) (*Response, error) {
+	query := ""
+	if filter != "" {
+		query = filter + "*"
+	}
+	return c.RequestJSON(ctx, "GET", "_cat/indices/"+query, params, out)
+}
+
+// TemplateInto streams the legacy _template reply straight into out.
+func (c *Client) TemplateInto(ctx context.Context, out any) (*Response, error) {
+	return c.RequestJSON(ctx, "GET", "_template", nil, out)
+}
+
+// IndexTemplateInto streams the _index_template reply straight into out.
+func (c *Client) IndexTemplateInto(ctx context.Context, out any) (*Response, error) {
+	return c.RequestJSON(ctx, "GET", "_index_template", nil, out)
+}
+
+// ClusterGetSettingsInto streams the cluster settings reply straight into out.
+func (c *Client) ClusterGetSettingsInto(ctx context.Context, out any) (*Response, error) {
+	return c.RequestJSON(ctx, "GET", "_cluster/settings", nil, out)
+}

@@ -38,14 +38,11 @@ func (a *App) connectTo(c conn.Connection) {
 		if err == nil {
 			client.Distribution = info.Distribution
 			client.BuildFlavor = info.BuildFlavor
-			hresp, herr := client.Request(a.backgroundCtx(), "GET", "_cluster/health", nil)
-			if herr == nil {
-				var h struct {
-					Status string `json:"status"`
-				}
-				if jsonErr := hresp.JSON(&h); jsonErr == nil {
-					health = h.Status
-				}
+			var h struct {
+				Status string `json:"status"`
+			}
+			if _, jsonErr := client.RequestJSON(a.backgroundCtx(), "GET", "_cluster/health", nil, &h); jsonErr == nil {
+				health = h.Status
 			}
 		}
 		a.update(func() {
@@ -88,38 +85,32 @@ func (a *App) refreshHealth() {
 	go func() {
 		ctx, cancel := context.WithTimeout(a.backgroundCtx(), 10*time.Second)
 		defer cancel()
-		resp, err := client.Request(ctx, "GET", "_cluster/health", nil)
-		if err != nil {
-			return
-		}
 		var h struct {
 			Status           string `json:"status"`
 			UnassignedShards int    `json:"unassigned_shards"`
 		}
-		if err := resp.JSON(&h); err != nil || h.Status == "" {
+		if _, err := client.RequestJSON(ctx, "GET", "_cluster/health", nil, &h); err != nil || h.Status == "" {
 			return
 		}
 		var docs int64
 		var shardsTotal, shardPri int
 		var size int64
-		if sresp, serr := client.Request(ctx, "GET", "_cluster/stats", nil); serr == nil {
-			var s struct {
-				Indices struct {
-					Docs struct {
-						Count int64 `json:"count"`
-					} `json:"docs"`
-					Shards struct {
-						Total     int `json:"total"`
-						Primaries int `json:"primaries"`
-					} `json:"shards"`
-					Store struct {
-						SizeInBytes int64 `json:"size_in_bytes"`
-					} `json:"store"`
-				} `json:"indices"`
-			}
-			if jerr := sresp.JSON(&s); jerr == nil {
-				docs, shardsTotal, shardPri, size = s.Indices.Docs.Count, s.Indices.Shards.Total, s.Indices.Shards.Primaries, s.Indices.Store.SizeInBytes
-			}
+		var s struct {
+			Indices struct {
+				Docs struct {
+					Count int64 `json:"count"`
+				} `json:"docs"`
+				Shards struct {
+					Total     int `json:"total"`
+					Primaries int `json:"primaries"`
+				} `json:"shards"`
+				Store struct {
+					SizeInBytes int64 `json:"size_in_bytes"`
+				} `json:"store"`
+			} `json:"indices"`
+		}
+		if _, serr := client.RequestJSON(ctx, "GET", "_cluster/stats", nil, &s); serr == nil {
+			docs, shardsTotal, shardPri, size = s.Indices.Docs.Count, s.Indices.Shards.Total, s.Indices.Shards.Primaries, s.Indices.Store.SizeInBytes
 		}
 		a.update(func() {
 			if a.client != client {

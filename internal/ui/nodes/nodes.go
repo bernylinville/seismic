@@ -153,12 +153,8 @@ func (m *Module) load(h kit.ModuleHost) {
 					"format": "json",
 					"h":      "name,ip,role,heap.percent,ram.percent,cpu,load_1m,disk.used_percent,node.role,version",
 				}
-				resp, err := client.CatNodes(context.Background(), params)
-				if err != nil {
-					return nil, err
-				}
 				var rows []NodeRow
-				if err := resp.JSON(&rows); err != nil {
+				if _, err := client.CatNodesInto(context.Background(), params, &rows); err != nil {
 					return nil, err
 				}
 				return rows, nil
@@ -192,14 +188,10 @@ func (m *Module) loadDetail(h kit.ModuleHost, name string) {
 		func() {},
 		func() func() {
 			nodes, err := func() (map[string]map[string]any, error) {
-				resp, err := client.Nodes(context.Background())
-				if err != nil {
-					return nil, err
-				}
 				var body struct {
 					Nodes map[string]map[string]any `json:"nodes"`
 				}
-				if err := resp.JSON(&body); err != nil {
+				if _, err := client.NodesInto(context.Background(), &body); err != nil {
 					return nil, err
 				}
 				return body.Nodes, nil

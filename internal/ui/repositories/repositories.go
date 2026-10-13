@@ -214,12 +214,8 @@ func (m *Module) load(h kit.ModuleHost) {
 		return
 	}
 	run(h, func() { m.loading = true }, func() ([]RepoRow, error) {
-		resp, err := client.CatRepositories(context.Background(), nil)
-		if err != nil {
-			return nil, err
-		}
 		var entries map[string]repoEntry
-		if err := resp.JSON(&entries); err != nil {
+		if _, err := client.CatRepositoriesInto(context.Background(), nil, &entries); err != nil {
 			return nil, err
 		}
 		rows := make([]RepoRow, 0, len(entries))

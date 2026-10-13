@@ -42,3 +42,13 @@ func (c *Client) SecurityUserPutPassword(ctx context.Context, username string, b
 func (c *Client) SecurityUserDelete(ctx context.Context, username string) (*Response, error) {
 	return c.Request(ctx, "DELETE", c.securityPath("user/"+encodeURIComponent(username)), nil)
 }
+
+// SecurityUsersInto streams the user list straight into out.
+func (c *Client) SecurityUsersInto(ctx context.Context, out any) (*Response, error) {
+	return c.RequestJSON(ctx, "GET", c.securityPath("user"), nil, out)
+}
+
+// SecurityRolesInto streams the role list straight into out.
+func (c *Client) SecurityRolesInto(ctx context.Context, out any) (*Response, error) {
+	return c.RequestJSON(ctx, "GET", c.securityPath("role"), nil, out)
+}

@@ -96,17 +96,12 @@ func (m *Module) load(h kit.ModuleHost) {
 	h.Load(
 		func() { m.loading = true; m.err = nil },
 		func() func() {
-			resp, err := client.Request(context.Background(), "GET", "_cat/recovery", map[string]any{
+			var rows []Row
+			_, err := client.RequestJSON(context.Background(), "GET", "_cat/recovery", map[string]any{
 				"format": "json",
 				"s":      "start_time_millis:desc",
 				"h":      "index,shard,type,stage,source,node,start_time",
-			})
-			var rows []Row
-			if err == nil {
-				if err = resp.JSON(&rows); err != nil {
-					rows = nil
-				}
-			}
+			}, &rows)
 			return func() {
 				m.loading = false
 				m.loadedOnce = true

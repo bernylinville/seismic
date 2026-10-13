@@ -188,3 +188,67 @@ func TestClientResponseAtLimitOK(t *testing.T) {
 		t.Errorf("body = %d bytes, want %d", len(resp.Body), maxResponseBytes)
 	}
 }
+
+func TestClientRequestJSONDecodes(t *testing.T) {
+	c, _ := newTestClient(t, Auth{Type: AuthNone}, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`[{"index":"a"},{"index":"b"}]`))
+	})
+	var rows []struct {
+		Index string `json:"index"`
+	}
+	resp, err := c.RequestJSON(context.Background(), http.MethodGet, "_cat/indices", nil, &rows)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[0].Index != "a" {
+		t.Errorf("rows = %+v", rows)
+	}
+	if resp.StatusCode != 200 {
+		t.Errorf("status = %d", resp.StatusCode)
+	}
+	if resp.Body != nil {
+		t.Errorf("Body should stay nil on streamed replies, got %d bytes", len(resp.Body))
+	}
+}
+
+func TestClientRequestJSONErrorCarriesBody(t *testing.T) {
+	c, _ := newTestClient(t, Auth{Type: AuthNone}, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(400)
+		w.Write([]byte(`{"error":{"type":"search_phase_execution"}}`))
+	})
+	var v map[string]any
+	_, err := c.RequestJSON(context.Background(), http.MethodGet, "_search", nil, &v)
+	httpErr, ok := err.(*HTTPError)
+	if !ok {
+		t.Fatalf("err = %v, want *HTTPError", err)
+	}
+	if httpErr.Code != 400 || len(httpErr.Body) == 0 {
+		t.Errorf("httpErr = %+v", httpErr)
+	}
+}
+
+func TestClientRequestJSONOversize(t *testing.T) {
+	c, _ := newTestClient(t, Auth{Type: AuthNone}, func(w http.ResponseWriter, r *http.Request) {
+		// A valid JSON string value that stays open past the cap, so the
+		// decoder itself never completes: only the byte counter can tell.
+		w.Write([]byte(`{"pad":"`))
+		w.Write(bytes.Repeat([]byte("x"), maxResponseBytes))
+		w.Write([]byte(`"}`))
+	})
+	var v map[string]any
+	_, err := c.RequestJSON(context.Background(), http.MethodGet, "_search", nil, &v)
+	if err == nil || !strings.Contains(err.Error(), "exceeds the 64 MB limit") {
+		t.Fatalf("err = %v, want size-limit error", err)
+	}
+}
+
+func TestClientRequestJSONDecodeError(t *testing.T) {
+	c, _ := newTestClient(t, Auth{Type: AuthNone}, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`not json`))
+	})
+	var v map[string]any
+	_, err := c.RequestJSON(context.Background(), http.MethodGet, "_search", nil, &v)
+	if err == nil || !strings.Contains(err.Error(), "decode") {
+		t.Fatalf("err = %v, want decode error", err)
+	}
+}

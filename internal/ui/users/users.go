@@ -5,7 +5,6 @@ package users
 
 import (
 	"context"
-	"encoding/json"
 	"slices"
 	"strings"
 
@@ -132,12 +131,8 @@ func (m *Module) load(h kit.ModuleHost) {
 }
 
 func fetchUsers(client *es.Client) ([]userRow, error) {
-	resp, err := client.SecurityUsers(context.Background())
-	if err != nil {
-		return nil, err
-	}
 	var raw map[string]esUser
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if _, err := client.SecurityUsersInto(context.Background(), &raw); err != nil {
 		return nil, err
 	}
 	rows := make([]userRow, 0, len(raw))

@@ -94,12 +94,8 @@ func (a *App) indicesLoad() {
 					"bytes": "b", "format": "json",
 					"h": "index,health,status,docs.count,store.size,pri,rep,creation.date.string",
 				}
-				resp, err := client.CatIndices(context.Background(), params, "")
-				if err != nil {
-					return nil, err
-				}
 				var rows []IndexRow
-				if err := resp.JSON(&rows); err != nil {
+				if _, err := client.CatIndicesInto(context.Background(), params, "", &rows); err != nil {
 					return nil, err
 				}
 				return rows, nil

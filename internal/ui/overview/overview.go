@@ -79,17 +79,13 @@ func (m *Module) load(h kit.ModuleHost) {
 			var health clusterHealth
 			var stats clusterStats
 			var err error
-			if resp, e := client.ClusterInfo(ctx); e == nil {
-				_ = resp.JSON(&info)
-			}
-			if resp, e := client.ClusterHealth(ctx); e == nil {
-				_ = resp.JSON(&health)
-			} else {
+			if _, e := client.ClusterInfoInto(ctx, &info); e != nil {
 				err = e
 			}
-			if resp, e := client.ClusterStats(ctx); e == nil {
-				_ = resp.JSON(&stats)
-			} else if err == nil {
+			if _, e := client.ClusterHealthInto(ctx, &health); e != nil && err == nil {
+				err = e
+			}
+			if _, e := client.ClusterStatsInto(ctx, &stats); e != nil && err == nil {
 				err = e
 			}
 			return func() {

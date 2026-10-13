@@ -49,3 +49,29 @@ func (c *Client) Test(ctx context.Context) (*Response, error) {
 	}
 	return info, nil
 }
+
+// SearchInto streams the search reply straight into out, avoiding a full
+// raw copy of large hit arrays.
+func (c *Client) SearchInto(ctx context.Context, params any, searchIndex []string, queryParams map[string]string, out any) (*Response, error) {
+	index := ""
+	if len(searchIndex) == 1 {
+		index = searchIndex[0]
+	} else if len(searchIndex) > 1 {
+		index = joinComma(searchIndex)
+	}
+
+	path := "_search"
+	if index != "" {
+		path = CleanIndexName(index) + "/_search"
+	}
+
+	if len(queryParams) > 0 {
+		q := url.Values{}
+		for k, v := range queryParams {
+			q.Set(k, v)
+		}
+		path += "?" + q.Encode()
+	}
+
+	return c.RequestJSON(ctx, "POST", path, params, out)
+}

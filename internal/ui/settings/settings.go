@@ -233,11 +233,16 @@ func (m *Module) load(h kit.ModuleHost) {
 	h.Load(
 		func() { m.loading = true },
 		func() func() {
-			resp, err := client.ClusterGetSettings(context.Background())
+			var doc map[string]json.RawMessage
 			var rows []settingRow
-			if err == nil {
-				rows, err = flattenSettings(resp.Body)
-			}
+			err := func() error {
+				if _, err := client.ClusterGetSettingsInto(context.Background(), &doc); err != nil {
+					return err
+				}
+				var ferr error
+				rows, ferr = flattenSettings(doc)
+				return ferr
+			}()
 			return func() {
 				m.loading = false
 				m.loadedOnce = true
@@ -251,11 +256,7 @@ func (m *Module) load(h kit.ModuleHost) {
 }
 
 // flattenSettings flattens the persistent/transient sections into dotted keys.
-func flattenSettings(body []byte) ([]settingRow, error) {
-	var doc map[string]json.RawMessage
-	if err := json.Unmarshal(body, &doc); err != nil {
-		return nil, err
-	}
+func flattenSettings(doc map[string]json.RawMessage) ([]settingRow, error) {
 	var rows []settingRow
 	for _, section := range []string{"persistent", "transient"} {
 		raw, ok := doc[section]

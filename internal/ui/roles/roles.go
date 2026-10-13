@@ -151,12 +151,8 @@ func (m *Module) load(h kit.ModuleHost) {
 }
 
 func fetchRoles(client *es.Client) ([]roleRow, error) {
-	resp, err := client.SecurityRoles(context.Background())
-	if err != nil {
-		return nil, err
-	}
 	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(resp.Body, &raw); err != nil {
+	if _, err := client.SecurityRolesInto(context.Background(), &raw); err != nil {
 		return nil, err
 	}
 	rows := make([]roleRow, 0, len(raw))

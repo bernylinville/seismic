@@ -116,16 +116,11 @@ func (m *Module) load(h kit.ModuleHost) {
 	h.Load(
 		func() { m.loading = true; m.err = nil },
 		func() func() {
-			resp, err := client.CatShards(context.Background(), map[string]any{
+			var rows []Row
+			_, err := client.CatShardsInto(context.Background(), map[string]any{
 				"format": "json",
 				"h":      "index,shard,prirep,state,docs,store,node,unassigned.reason",
-			}, m.filterIndex())
-			var rows []Row
-			if err == nil {
-				if err = resp.JSON(&rows); err != nil {
-					rows = nil
-				}
-			}
+			}, m.filterIndex(), &rows)
 			return func() {
 				m.loading = false
 				m.loadedOnce = true

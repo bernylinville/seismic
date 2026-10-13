@@ -153,18 +153,16 @@ func (m *Module) loadIndices(h kit.ModuleHost) {
 	h.Load(
 		func() { m.loadedOnce = true },
 		func() func() {
-			resp, err := client.CatIndices(context.Background(), map[string]any{
+			var rows []struct {
+				Index string `json:"index"`
+			}
+			_, err := client.CatIndicesInto(context.Background(), map[string]any{
 				"format": "json", "h": "index",
-			}, "")
+			}, "", &rows)
 			var names []string
 			if err == nil {
-				var rows []struct {
-					Index string `json:"index"`
-				}
-				if err = resp.JSON(&rows); err == nil {
-					for _, r := range rows {
-						names = append(names, r.Index)
-					}
+				for _, r := range rows {
+					names = append(names, r.Index)
 				}
 			}
 			return func() {
@@ -214,13 +212,16 @@ func (m *Module) run(h kit.ModuleHost) {
 	h.Load(
 		func() { m.loading = true; m.ranOnce = true },
 		func() func() {
-			resp, err := client.Search(context.Background(), body, m.searchIndices(), nil)
 			var res *searchResponse
-			if err == nil {
-				res = &searchResponse{}
-				if err = resp.JSON(res); err != nil {
-					res = nil
+			var err error
+			if res, err = func() (*searchResponse, error) {
+				out := &searchResponse{}
+				if _, err := client.SearchInto(context.Background(), body, m.searchIndices(), nil, out); err != nil {
+					return nil, err
 				}
+				return out, nil
+			}(); err != nil {
+				res = nil
 			}
 			return func() {
 				m.loading = false
@@ -359,28 +360,28 @@ func (m *Module) loadMapping(h kit.ModuleHost) {
 	h.Load(
 		func() {},
 		func() func() {
-			resp, err := client.Request(context.Background(), "GET",
-				es.CleanIndexName(pattern)+"/_mapping?allow_no_indices=true&ignore_unavailable=true", nil)
+			var reply map[string]mappingReply
+			_, err := client.RequestJSON(context.Background(), "GET",
+				es.CleanIndexName(pattern)+"/_mapping?allow_no_indices=true&ignore_unavailable=true", nil, &reply)
 			if err != nil {
 				return func() {}
 			}
-			fields := flattenMappings(resp.Body)
+			fields := flattenMappings(reply)
 			return func() { m.ed.SetMapping(fields) }
 		},
 	)
 }
 
+// mappingReply is the shape of one index's entry in a _mapping response.
+type mappingReply struct {
+	Mappings struct {
+		Properties map[string]json.RawMessage `json:"properties"`
+	} `json:"mappings"`
+}
+
 // flattenMappings walks the _mapping reply into dot-path field infos,
 // merging the mappings of every index the pattern matched.
-func flattenMappings(body []byte) map[string]editor.FieldInfo {
-	var reply map[string]struct {
-		Mappings struct {
-			Properties map[string]json.RawMessage `json:"properties"`
-		} `json:"mappings"`
-	}
-	if err := json.Unmarshal(body, &reply); err != nil {
-		return nil
-	}
+func flattenMappings(reply map[string]mappingReply) map[string]editor.FieldInfo {
 	fields := map[string]editor.FieldInfo{}
 	for _, idx := range reply {
 		collectFields(idx.Mappings.Properties, "", fields)

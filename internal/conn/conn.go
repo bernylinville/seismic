@@ -368,10 +368,6 @@ func TestConnection(ctx context.Context, uri string, auth es.Auth, tlsCfg *tls.C
 	if err != nil {
 		return nil, nil, err
 	}
-	resp, err := client.Request(ctx, "GET", "", nil)
-	if err != nil {
-		return nil, nil, err
-	}
 	var info struct {
 		ClusterName string `json:"cluster_name"`
 		ClusterUUID string `json:"cluster_uuid"`
@@ -382,7 +378,7 @@ func TestConnection(ctx context.Context, uri string, auth es.Auth, tlsCfg *tls.C
 			BuildFlavor  string `json:"build_flavor"`
 		} `json:"version"`
 	}
-	if err := resp.JSON(&info); err != nil {
+	if _, err := client.RequestJSON(ctx, "GET", "", nil, &info); err != nil {
 		return nil, nil, fmt.Errorf("conn: parse cluster info: %w", err)
 	}
 

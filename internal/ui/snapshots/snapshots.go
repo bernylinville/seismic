@@ -455,14 +455,10 @@ func (m *Module) loadRepos(h kit.ModuleHost) {
 		return
 	}
 	run(h, func() { m.repoLoading = true }, func() ([]string, error) {
-		resp, err := client.CatRepositories(context.Background(), nil)
-		if err != nil {
-			return nil, err
-		}
 		var entries map[string]struct {
 			Type string `json:"type"`
 		}
-		if err := resp.JSON(&entries); err != nil {
+		if _, err := client.CatRepositoriesInto(context.Background(), nil, &entries); err != nil {
 			return nil, err
 		}
 		names := make([]string, 0, len(entries))
@@ -491,12 +487,8 @@ func (m *Module) loadSnaps(h kit.ModuleHost) {
 		return
 	}
 	run(h, func() { m.loading = true }, func() ([]snapEntry, error) {
-		resp, err := client.CatSnapshots(context.Background(), m.repo)
-		if err != nil {
-			return nil, err
-		}
 		var list snapList
-		if err := resp.JSON(&list); err != nil {
+		if _, err := client.CatSnapshotsInto(context.Background(), m.repo, &list); err != nil {
 			return nil, err
 		}
 		return list.Snapshots, nil
@@ -516,20 +508,14 @@ func (m *Module) loadSlm(h kit.ModuleHost) {
 		return
 	}
 	run3(h, func() { m.slmLoading = true }, func() (slmList, string, error) {
-		resp, err := client.CatSlmPolicies(context.Background())
-		if err != nil {
-			return nil, "", err
-		}
 		var policies slmList
-		if err := resp.JSON(&policies); err != nil {
+		if _, err := client.CatSlmPoliciesInto(context.Background(), &policies); err != nil {
 			return nil, "", err
 		}
 		mode := ""
-		if status, err := client.SlmGetStatus(context.Background()); err == nil {
-			var s slmStatus
-			if err := status.JSON(&s); err == nil {
-				mode = s.OperationMode
-			}
+		var s slmStatus
+		if _, err := client.SlmGetStatusInto(context.Background(), &s); err == nil {
+			mode = s.OperationMode
 		}
 		return policies, mode, nil
 	}, func(policies slmList, mode string, err error) {
@@ -554,12 +540,8 @@ func (m *Module) showDetail(h kit.ModuleHost, name string) {
 	}
 	m.detailName = name
 	run(h, func() { m.detailBusy = true }, func() (*snapEntry, error) {
-		resp, err := client.GetSnapshot(context.Background(), m.repo, name)
-		if err != nil {
-			return nil, err
-		}
 		var list snapList
-		if err := resp.JSON(&list); err != nil {
+		if _, err := client.GetSnapshotInto(context.Background(), m.repo, name, &list); err != nil {
 			return nil, err
 		}
 		if len(list.Snapshots) == 0 {

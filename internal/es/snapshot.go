@@ -41,3 +41,18 @@ func (c *Client) SnapshotRestore(ctx context.Context, repository, snapshot strin
 func (c *Client) GetSnapshot(ctx context.Context, repository, snapshot string) (*Response, error) {
 	return c.Request(ctx, "GET", "_snapshot/"+repository+"/"+snapshot, nil)
 }
+
+// CatRepositoriesInto streams the repository list straight into out.
+func (c *Client) CatRepositoriesInto(ctx context.Context, params map[string]any, out any) (*Response, error) {
+	return c.RequestJSON(ctx, "GET", "_snapshot", params, out)
+}
+
+// CatSnapshotsInto streams the repository snapshot list straight into out.
+func (c *Client) CatSnapshotsInto(ctx context.Context, repository string, out any) (*Response, error) {
+	return c.RequestJSON(ctx, "GET", "_snapshot/"+repository+"/_all", nil, out)
+}
+
+// GetSnapshotInto streams one snapshot's details straight into out.
+func (c *Client) GetSnapshotInto(ctx context.Context, repository, snapshot string, out any) (*Response, error) {
+	return c.RequestJSON(ctx, "GET", "_snapshot/"+repository+"/"+snapshot, nil, out)
+}

@@ -52,3 +52,18 @@ func (c *Client) CatRecovery(ctx context.Context) (*Response, error) {
 func (c *Client) Recovery(ctx context.Context) (*Response, error) {
 	return c.Request(ctx, "GET", "_recovery", nil)
 }
+
+// ClusterInfoInto streams the cluster root info straight into out.
+func (c *Client) ClusterInfoInto(ctx context.Context, out any) (*Response, error) {
+	return c.RequestJSON(ctx, "GET", "", nil, out)
+}
+
+// ClusterHealthInto streams the cluster health reply straight into out.
+func (c *Client) ClusterHealthInto(ctx context.Context, out any) (*Response, error) {
+	return c.RequestJSON(ctx, "GET", "_cluster/health", nil, out)
+}
+
+// ClusterStatsInto streams the cluster stats reply straight into out.
+func (c *Client) ClusterStatsInto(ctx context.Context, out any) (*Response, error) {
+	return c.RequestJSON(ctx, "GET", "_cluster/stats", nil, out)
+}

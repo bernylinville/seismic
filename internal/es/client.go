@@ -3,6 +3,7 @@
 package es
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/base64"
@@ -172,6 +173,108 @@ func ChunkIndices(indices []string) [][]string { return chunk(indices, maxIndice
 //   - HEAD: returns ok as a bool body;
 //   - non-2xx answers come back as *HTTPError.
 func (c *Client) Request(ctx context.Context, method, path string, params any) (*Response, error) {
+	req, err := c.buildRequest(ctx, method, path, params)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Read at most maxResponseBytes+1 so an oversized body is detected by the
+	// extra byte instead of buffering it all first.
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > maxResponseBytes {
+		return nil, errResponseTooLarge(method, path)
+	}
+
+	if method == http.MethodHead {
+		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+			return &Response{StatusCode: resp.StatusCode, Header: resp.Header, Body: []byte("true")}, nil
+		}
+		return &Response{StatusCode: resp.StatusCode, Header: resp.Header, Body: []byte("false")}, nil
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, &HTTPError{Status: resp.Status, Code: resp.StatusCode, Body: data}
+	}
+	return &Response{StatusCode: resp.StatusCode, Header: resp.Header, Body: data}, nil
+}
+
+// RequestJSON performs one ES call and, on 2xx, streams the body straight
+// into out with a json.Decoder: the raw JSON is never buffered alongside the
+// decoded value, halving peak memory on MB-scale replies (10k-hit searches,
+// whole-cluster mappings). The returned Response carries status and headers
+// only (Body stays nil); non-2xx replies still come back as *HTTPError with
+// the raw error body. HEAD is not supported.
+func (c *Client) RequestJSON(ctx context.Context, method, path string, params, out any) (*Response, error) {
+	req, err := c.buildRequest(ctx, method, path, params)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
+		if err != nil {
+			return nil, err
+		}
+		return nil, &HTTPError{Status: resp.Status, Code: resp.StatusCode, Body: data}
+	}
+
+	lr := &limitReader{r: resp.Body, left: maxResponseBytes + 1}
+	err = json.NewDecoder(lr).Decode(out)
+	if lr.read > maxResponseBytes {
+		return nil, errResponseTooLarge(method, path)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("es: decode %s %s reply: %w", method, path, err)
+	}
+	return &Response{StatusCode: resp.StatusCode, Header: resp.Header}, nil
+}
+
+// errResponseTooLarge is the guardrail message shared by both read paths.
+func errResponseTooLarge(method, path string) error {
+	return fmt.Errorf("es: %s %s response exceeds the %d MB limit; narrow the request (filter_path, size, or pagination)", method, path, maxResponseBytes>>20)
+}
+
+// limitReader serves at most n bytes and counts what it served, so callers
+// can detect a body that reached the cap after a streaming decode.
+type limitReader struct {
+	r    io.Reader
+	left int
+	read int
+}
+
+func (l *limitReader) Read(p []byte) (int, error) {
+	if l.left <= 0 {
+		return 0, io.EOF
+	}
+	if len(p) > l.left {
+		p = p[:l.left]
+	}
+	n, err := l.r.Read(p)
+	l.left -= n
+	l.read += n
+	return n, err
+}
+
+// buildRequest assembles the http.Request for one ES call:
+//
+//   - GET: params (map[string]any) becomes the query string;
+//   - PUT/POST: params is the JSON body (a string is sent verbatim).
+func (c *Client) buildRequest(ctx context.Context, method, path string, params any) (*http.Request, error) {
 	full := c.uri + path
 	if method == http.MethodGet {
 		if m, ok := params.(map[string]any); ok && len(m) > 0 {
@@ -183,25 +286,20 @@ func (c *Client) Request(ctx context.Context, method, path string, params any) (
 		}
 	}
 
-	var body any
-	if method == http.MethodPut || method == http.MethodPost {
-		body = params
-	}
-
 	var bodyReader io.Reader
 	var rawBody []byte
-	if body != nil {
-		switch b := body.(type) {
+	if (method == http.MethodPut || method == http.MethodPost) && params != nil {
+		switch b := params.(type) {
 		case string:
 			rawBody = []byte(b)
 		default:
-			enc, err := json.Marshal(body)
+			enc, err := json.Marshal(params)
 			if err != nil {
 				return nil, err
 			}
 			rawBody = enc
 		}
-		bodyReader = strings.NewReader(string(rawBody))
+		bodyReader = bytes.NewReader(rawBody)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, full, bodyReader)
@@ -220,32 +318,5 @@ func (c *Client) Request(ctx context.Context, method, path string, params any) (
 			return nil, err
 		}
 	}
-
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	// Read at most maxResponseBytes+1 so an oversized body is detected by the
-	// extra byte instead of buffering it all first.
-	data, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
-	if err != nil {
-		return nil, err
-	}
-	if len(data) > maxResponseBytes {
-		return nil, fmt.Errorf("es: %s %s response exceeds the %d MB limit; narrow the request (filter_path, size, or pagination)", method, path, maxResponseBytes>>20)
-	}
-
-	if method == http.MethodHead {
-		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-			return &Response{StatusCode: resp.StatusCode, Header: resp.Header, Body: []byte("true")}, nil
-		}
-		return &Response{StatusCode: resp.StatusCode, Header: resp.Header, Body: []byte("false")}, nil
-	}
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, &HTTPError{Status: resp.Status, Code: resp.StatusCode, Body: data}
-	}
-	return &Response{StatusCode: resp.StatusCode, Header: resp.Header, Body: data}, nil
+	return req, nil
 }
