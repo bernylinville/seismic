@@ -151,14 +151,6 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	})
 }
 
-// card draws one stat card: a filled, rounded group on the page background,
-// as the system settings' cards.
-func card(c *ui.Context) ui.Element {
-	t := c.Theme()
-	return ui.Column(c).Grow(1).Background(t.Surface).Radius(t.Space(3)).
-		BorderWidth(1, 1, 1, 1).BorderColor(t.Border).Padding(t.Space(3.5)).Gap(t.Space(1.5))
-}
-
 func (m *Module) clusterCard(c *ui.Context, h kit.ModuleHost) {
 	t := c.Theme()
 	version := m.info.Version.Number
@@ -169,7 +161,7 @@ func (m *Module) clusterCard(c *ui.Context, h kit.ModuleHost) {
 	if distribution == "" {
 		distribution = h.Distribution()
 	}
-	card(c).Children(func() {
+	kit.Card(c).Grow(1).Padding(t.Space(3.5)).Gap(t.Space(1.5)).Children(func() {
 		ui.Text(c, kit.Tr(h.Lang(), "集群")).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 		ui.Text(c, kit.Tr(h.Lang(), orDefault(m.info.ClusterName, "未知集群"))).FontSize(kit.SizeTitle(t)).Bold()
 		ui.Text(c, m.info.ClusterUUID).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
@@ -183,7 +175,7 @@ func (m *Module) clusterCard(c *ui.Context, h kit.ModuleHost) {
 func (m *Module) healthCard(c *ui.Context, lang string) {
 	t := c.Theme()
 	status := orDefault(m.health.Status, m.stats.Status)
-	card(c).Children(func() {
+	kit.Card(c).Grow(1).Padding(t.Space(3.5)).Gap(t.Space(1.5)).Children(func() {
 		ui.Text(c, kit.Tr(lang, "健康")).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 		ui.Row(c).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
 			kit.Dot(c, t.Space(4), kit.HealthColor(c, status))
@@ -200,7 +192,7 @@ func (m *Module) statusCard(c *ui.Context, lang string) {
 	if nodes == 0 {
 		nodes = m.health.NumberOfNodes
 	}
-	card(c).Children(func() {
+	kit.Card(c).Grow(1).Padding(t.Space(3.5)).Gap(t.Space(1.5)).Children(func() {
 		ui.Text(c, kit.Tr(lang, "状态")).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 		ui.Row(c).Gap(t.Space(1.5)).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, fmtInt(nodes)).FontSize(kit.SizeLarge(t)).Bold()
@@ -213,7 +205,7 @@ func (m *Module) statusCard(c *ui.Context, lang string) {
 
 func (m *Module) dataCard(c *ui.Context, lang string) {
 	t := c.Theme()
-	card(c).Children(func() {
+	kit.Card(c).Grow(1).Padding(t.Space(3.5)).Gap(t.Space(1.5)).Children(func() {
 		ui.Text(c, kit.Tr(lang, "数据")).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 		ui.Row(c).Gap(t.Space(1.5)).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, fmtInt(m.stats.Indices.Docs.Count)).FontSize(kit.SizeLarge(t)).Bold()

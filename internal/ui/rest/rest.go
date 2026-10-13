@@ -145,19 +145,12 @@ func (m *Module) closeTab() {
 	}
 }
 
-// panel draws one of the page's grouped cards, filled as the overview's.
-func panel(c *ui.Context) ui.Element {
-	t := c.Theme()
-	return ui.Column(c).Background(t.Surface).Radius(t.Space(3)).
-		Border(1, t.Border).Padding(t.Space(3)).Gap(t.Space(2))
-}
-
 // requestView renders method/path/body of the active tab plus the send row.
 func (m *Module) requestView(h kit.ModuleHost, c *ui.Context) {
 	tb := &m.tabs[m.active]
 	t := c.Theme()
 
-	panel(c).Children(func() {
+	kit.Card(c).Padding(t.Space(3)).Gap(t.Space(2)).Children(func() {
 		ui.Row(c).Gap(t.Space(2)).Children(func() {
 			ui.Select(c, &tb.method, httpMethods).Width(120)
 			if path := ui.TextInput(c, &tb.path).Label(kit.Tr(h.Lang(), "路径")).Grow(1); path.Submitted() {
@@ -193,7 +186,7 @@ func (m *Module) requestView(h kit.ModuleHost, c *ui.Context) {
 func (m *Module) responseView(c *ui.Context, t *ui.Theme, lang string) {
 	tb := &m.tabs[m.active]
 
-	panel(c).Grow(1).Children(func() {
+	kit.Card(c).Grow(1).Padding(t.Space(3)).Gap(t.Space(2)).Children(func() {
 		if !tb.sent {
 			ui.Text(c, kit.Tr(lang, "还没发过请求")).TextColor(t.TextMuted)
 			return
@@ -232,7 +225,7 @@ func statusLevel(code int) kit.Level {
 func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 	ui.Column(c).Width(280).Gap(t.Space(3)).Children(func() {
 		// 历史
-		panel(c).Grow(1).Children(func() {
+		kit.Card(c).Grow(1).Padding(t.Space(3)).Gap(t.Space(2)).Children(func() {
 			ui.Row(c).Children(func() {
 				ui.Text(c, kit.Tr(h.Lang(), "历史")).Bold().Grow(1)
 				if ui.Button(c, kit.Tr(h.Lang(), "清空历史")).Clicked() {
@@ -273,7 +266,7 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 		})
 
 		// 保存的查询
-		panel(c).Children(func() {
+		kit.Card(c).Padding(t.Space(3)).Gap(t.Space(2)).Children(func() {
 			ui.Text(c, kit.Tr(h.Lang(), "保存的查询")).Bold()
 			if len(m.saved) == 0 {
 				ui.Text(c, kit.Tr(h.Lang(), "保存常用请求，一键再发")).TextColor(t.TextMuted)
