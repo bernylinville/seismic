@@ -5,6 +5,7 @@ import "seismic/internal/ui/kit"
 func init() {
 	kit.RegisterLang(map[string]string{
 		"文档搜索":                       "Document search",
+		"在匹配的索引上执行查询":               "Run queries across matching indices",
 		"索引，如 log-* 或 logs-1,logs-2": "Indices, e.g. log-* or logs-1,logs-2",
 		"匹配 {0} 个索引":                 "matches {0} indices",
 		"搜索":                         "Search",

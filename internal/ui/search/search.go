@@ -471,115 +471,128 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		m.loadIndices(h)
 	}
 	t := c.Theme()
+	// ⌘R 与 ⌘↩ 都从第一页重跑搜索。
+	runSearch := func() {
+		m.from = 0
+		m.run(h)
+	}
+	c.OnShortcut(ui.Cmd, ui.KeyR, runSearch)
+	c.OnShortcut(ui.Cmd, ui.KeyEnter, runSearch)
 
-	ui.Column(c).Fill().Padding(16).Gap(12).Children(func() {
-		ui.Text(c, kit.Tr(h.Lang(), "文档搜索")).FontSize(20).Bold()
+	ui.Column(c).Fill().Children(func() {
+		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
+			ui.Column(c).Children(func() {
+				ui.Text(c, kit.Tr(h.Lang(), "文档搜索")).FontSize(kit.SizeTitle(t)).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "在匹配的索引上执行查询")).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
+			})
+		})
 
-		// 查询区。
-		ui.Column(c).Gap(8).Children(func() {
-			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-				ui.TextInput(c, &m.indexPattern).Placeholder(kit.Tr(h.Lang(), "索引，如 log-* 或 logs-1,logs-2")).Width(240)
-				if m.indicesErr != nil {
-					ui.Text(c, kit.ErrMessage(m.indicesErr)).FontSize(12).TextColor(ui.Hex("#d64545"))
-				} else {
-					ui.Text(c, kit.Tr(h.Lang(), "匹配 {0} 个索引", m.matchedCount())).FontSize(12).TextColor(t.TextMuted)
-				}
+		ui.Column(c).Grow(1).Padding(0, t.Space(5), t.Space(4), t.Space(5)).Gap(t.Space(3)).Children(func() {
+			// 查询区。
+			ui.Column(c).Gap(t.Space(2)).Children(func() {
+				ui.Row(c).Gap(t.Space(2)).AlignItems(ui.Center).Children(func() {
+					ui.TextInput(c, &m.indexPattern).Placeholder(kit.Tr(h.Lang(), "索引，如 log-* 或 logs-1,logs-2")).Width(240)
+					if m.indicesErr != nil {
+						ui.Text(c, kit.ErrMessage(m.indicesErr)).FontSize(kit.SizeCaption(t)).TextColor(t.Danger)
+					} else {
+						ui.Text(c, kit.Tr(h.Lang(), "匹配 {0} 个索引", m.matchedCount())).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
+					}
+					ui.Spacer(c)
+					ui.Text(c, "from").FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
+					ui.NumberInput(c, &m.from, 0, 100000, 10).Width(80)
+					ui.Text(c, "size").FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
+					ui.NumberInput(c, &m.size, 1, 10000, 10).Width(80)
+					if ui.PrimaryButton(c, kit.Tr(h.Lang(), "搜索")).Clicked() {
+						runSearch()
+					}
+				})
+
+				// JSON 代码编辑器：高亮/行号/括号匹配/结构+mapping 补全。
+				ui.Column(c).Height(190).Border(1, t.Border).Radius(t.Radius).Children(func() {
+					m.ed.View(c)
+				})
+
+				ui.Row(c).Gap(t.Space(2)).AlignItems(ui.Center).Children(func() {
+					if ui.Button(c, kit.Tr(h.Lang(), "格式化 JSON")).Clicked() {
+						m.formatQuery()
+					}
+					if ui.Button(c, kit.Tr(h.Lang(), "重置")).Clicked() {
+						m.Reset()
+					}
+					if m.formatErr != "" {
+						ui.Text(c, m.formatErr).FontSize(kit.SizeCaption(t)).TextColor(t.Danger)
+					}
+				})
+			})
+
+			// 结果区。
+			if !m.ranOnce {
+				ui.Text(c, kit.Tr(h.Lang(), "填好索引和查询，点「搜索」")).TextColor(t.TextMuted)
+				return
+			}
+			if m.loading {
+				ui.Text(c, kit.Tr(h.Lang(), "搜索中…")).TextColor(t.TextMuted)
+				return
+			}
+			if m.err != nil {
+				ui.Text(c, kit.ErrMessage(m.err)).FontSize(kit.SizeCaption(t)).TextColor(t.Danger)
+				return
+			}
+			ui.Row(c).Gap(t.Space(2)).AlignItems(ui.Center).Children(func() {
+				ui.Text(c, kit.Tr(h.Lang(), "共 {0} 条 · {1} ms", m.total, m.tookMS)).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 				ui.Spacer(c)
-				ui.Text(c, "from").FontSize(12).TextColor(t.TextMuted)
-				ui.NumberInput(c, &m.from, 0, 100000, 10).Width(80)
-				ui.Text(c, "size").FontSize(12).TextColor(t.TextMuted)
-				ui.NumberInput(c, &m.size, 1, 10000, 10).Width(80)
-				if ui.PrimaryButton(c, kit.Tr(h.Lang(), "搜索")).Clicked() {
-					m.from = 0
+				if ui.Button(c, kit.Tr(h.Lang(), "上一页")).Disabled(m.from <= 0).Clicked() {
+					m.from -= m.size
+					if m.from < 0 {
+						m.from = 0
+					}
+					m.run(h)
+				}
+				if ui.Button(c, kit.Tr(h.Lang(), "下一页")).Disabled(int(m.from)+int(m.size) >= m.total).Clicked() {
+					m.from += m.size
 					m.run(h)
 				}
 			})
 
-			// JSON 代码编辑器：高亮/行号/括号匹配/结构+mapping 补全。
-			ui.Column(c).Height(190).Border(1, t.Border).Radius(6).Children(func() {
-				m.ed.View(c)
-			})
-
-			ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-				if ui.Button(c, kit.Tr(h.Lang(), "格式化 JSON")).Clicked() {
-					m.formatQuery()
-				}
-				if ui.Button(c, kit.Tr(h.Lang(), "重置")).Clicked() {
-					m.Reset()
-				}
-				if m.formatErr != "" {
-					ui.Text(c, m.formatErr).FontSize(12).TextColor(ui.Hex("#d64545"))
-				}
-			})
-		})
-
-		// 结果区。
-		if !m.ranOnce {
-			ui.Text(c, kit.Tr(h.Lang(), "填好索引和查询，点「搜索」")).TextColor(t.TextMuted)
-			return
-		}
-		if m.loading {
-			ui.Text(c, kit.Tr(h.Lang(), "搜索中…")).TextColor(t.TextMuted)
-			return
-		}
-		if m.err != nil {
-			ui.Text(c, kit.ErrMessage(m.err)).FontSize(12).TextColor(ui.Hex("#d64545"))
-			return
-		}
-		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, kit.Tr(h.Lang(), "共 {0} 条 · {1} ms", m.total, m.tookMS)).FontSize(12).TextColor(t.TextMuted)
-			ui.Spacer(c)
-			if ui.Button(c, kit.Tr(h.Lang(), "上一页")).Disabled(m.from <= 0).Clicked() {
-				m.from -= m.size
-				if m.from < 0 {
-					m.from = 0
-				}
-				m.run(h)
+			if len(m.rows) == 0 {
+				ui.Text(c, kit.Tr(h.Lang(), "没搜到任何文档")).TextColor(t.TextMuted)
+				return
 			}
-			if ui.Button(c, kit.Tr(h.Lang(), "下一页")).Disabled(int(m.from)+int(m.size) >= m.total).Clicked() {
-				m.from += m.size
-				m.run(h)
+			if m.selectedRow >= len(m.rows) {
+				m.selectedRow = -1
+			}
+			cols := make([]ui.TableColumn, 0, 3+len(m.columns))
+			cols = append(cols,
+				ui.TableColumn{Title: "_index", Width: 140},
+				ui.TableColumn{Title: "_id", Width: 140},
+				ui.TableColumn{Title: "_score", Width: 70, Align: ui.End},
+			)
+			for _, k := range m.columns {
+				cols = append(cols, ui.TableColumn{Title: k})
+			}
+			listState := ui.ListState{Selected: &m.selectedRow}
+			ui.Table(c, &listState, cols, len(m.rows), func(row, col int) {
+				r := m.rows[row]
+				switch {
+				case col == 0:
+					ui.Text(c, r.Index).SingleLine()
+				case col == 1:
+					ui.Text(c, r.ID).SingleLine()
+				case col == 2:
+					ui.Text(c, r.Score)
+				default:
+					ui.Text(c, flatValue(r.Source, m.columns[col-3])).SingleLine()
+				}
+			}).Grow(1)
+
+			if m.selectedRow >= 0 {
+				r := m.rows[m.selectedRow]
+				ui.Column(c).Height(180).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
+					Background(t.Surface).Padding(t.Space(3), t.Space(4), t.Space(3), t.Space(4)).Gap(t.Space(1.5)).Children(func() {
+					ui.Text(c, r.Index+" / "+r.ID).Bold()
+					ui.Text(c, r.prettySource()).Font("monospace").FontSize(kit.SizeMono(t))
+				})
 			}
 		})
-
-		if len(m.rows) == 0 {
-			ui.Text(c, kit.Tr(h.Lang(), "没搜到任何文档")).TextColor(t.TextMuted)
-			return
-		}
-		if m.selectedRow >= len(m.rows) {
-			m.selectedRow = -1
-		}
-		cols := make([]ui.TableColumn, 0, 3+len(m.columns))
-		cols = append(cols,
-			ui.TableColumn{Title: "_index", Width: 140},
-			ui.TableColumn{Title: "_id", Width: 140},
-			ui.TableColumn{Title: "_score", Width: 70, Align: ui.End},
-		)
-		for _, k := range m.columns {
-			cols = append(cols, ui.TableColumn{Title: k})
-		}
-		listState := ui.ListState{Selected: &m.selectedRow}
-		ui.Table(c, &listState, cols, len(m.rows), func(row, col int) {
-			r := m.rows[row]
-			switch {
-			case col == 0:
-				ui.Text(c, r.Index).FontSize(12).SingleLine()
-			case col == 1:
-				ui.Text(c, r.ID).FontSize(12).SingleLine()
-			case col == 2:
-				ui.Text(c, r.Score).FontSize(12)
-			default:
-				ui.Text(c, flatValue(r.Source, m.columns[col-3])).FontSize(12).SingleLine()
-			}
-		}).Grow(1)
-
-		if m.selectedRow >= 0 {
-			r := m.rows[m.selectedRow]
-			ui.Column(c).Height(180).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
-				Background(t.Surface).Padding(12, 16, 12, 16).Gap(6).Children(func() {
-				ui.Text(c, r.Index+" / "+r.ID).Bold().FontSize(12)
-				ui.Text(c, r.prettySource()).Font("monospace").FontSize(12)
-			})
-		}
 	})
 }

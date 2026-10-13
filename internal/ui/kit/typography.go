@@ -15,3 +15,7 @@ func SizeTitle(t *ui.Theme) float32 { return t.Rem(1.3) }
 
 // SizeLarge sizes the page's hero numbers.
 func SizeLarge(t *ui.Theme) float32 { return t.Rem(2) }
+
+// SizeMono sizes code and JSON text: a notch under body, as the system's
+// consoles do.
+func SizeMono(t *ui.Theme) float32 { return t.Rem(0.92) }
