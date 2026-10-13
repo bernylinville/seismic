@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -115,9 +116,14 @@ type Editor struct {
 		lines, chars int
 		err          error
 		pos          Pos
+		degraded     bool  // 超大文档：实时校验/高亮已停用
+		notice       string // 拒绝加载/插入的提示，空为无
 	}
 
 	onChange func()
+
+	// lastValidate 是上次逐键校验的时间（防抖用）。
+	lastValidate time.Time
 
 	// 剪贴板策略默认走系统剪贴板；测试里替换为假实现。
 	ReadClipboard  func() string
@@ -129,6 +135,22 @@ type Editor struct {
 }
 
 var _ ui.TextInputClient = (*Editor)(nil)
+
+// 大文档防护：degradeBytes 以上停用逐键校验、语法高亮与补全（只保留
+// 纯文本编辑）；debounceBytes 以上在连续输入时按 validateEvery 防抖；
+// maxDocBytes 是硬上限，SetText 拒绝加载、编辑拒继续增长。
+const (
+	debounceBytes = 64 << 10                // 64 KiB
+	degradeBytes  = 1 << 20                 // 1 MiB
+	maxDocBytes   = 8 << 20                 // 8 MiB
+	validateEvery = 200 * time.Millisecond // 连续输入时的最小校验间隔
+)
+
+// mbSize 把字节数格式成 MB 显示。
+func mbSize(n int) string { return fmt.Sprintf("%.1f MB", float64(n)/(1<<20)) }
+
+// degradedNow 报告当前文档是否在降级区间。
+func (e *Editor) degradedNow() bool { return e.snap().ByteLen() >= degradeBytes }
 
 // New 建一个空编辑器。
 func New() *Editor {
@@ -142,14 +164,20 @@ func New() *Editor {
 
 // ---- 对外 API ----
 
-// SetText 整体替换文本（重置撤销栈），光标回到开头。
+// SetText 整体替换文本（重置撤销栈），光标回到开头；超过 maxDocBytes
+// 的文档拒绝加载并保留原内容。
 func (e *Editor) SetText(s string) {
+	if len(s) > maxDocBytes {
+		e.status.notice = fmt.Sprintf("文档 %s 超过 %s 上限，未加载", mbSize(len(s)), mbSize(maxDocBytes))
+		return
+	}
+	e.status.notice = ""
 	e.undoStack, e.redoStack, e.undoMergeText = nil, nil, ""
 	e.buf.Set(s)
 	e.sel = ui.TextInputSelection{}
 	e.marked = nil
 	e.closeCompletion()
-	e.updateStatus()
+	e.updateStatus(true)
 }
 
 // Text 返回全文。
@@ -259,6 +287,9 @@ func (e *Editor) clampRange(r ui.TextInputRange) ui.TextInputRange {
 // ---- 编辑原语（都在主线程；统一走 pushUndo + afterEdit） ----
 
 func (e *Editor) replaceUTF16(r ui.TextInputRange, text string) {
+	if !e.roomFor(len(text)) {
+		return
+	}
 	e.pushUndo()
 	actual := e.buf.ReplaceUTF16(r, text)
 	end := actual.Start + ui.UTF16Len(text)
@@ -269,6 +300,9 @@ func (e *Editor) replaceUTF16(r ui.TextInputRange, text string) {
 // replaceRunes 以 rune 坐标替换（回车缩进/补全插入用），caretRune
 // 是插入后的光标 rune 偏移。
 func (e *Editor) replaceRunes(r0, r1 int, text string, caretRune int) {
+	if !e.roomFor(len(text)) {
+		return
+	}
 	e.pushUndo()
 	e.buf.Replace(r0, r1, text)
 	snap := e.snap()
@@ -386,8 +420,18 @@ func chainEdit(prevPost, curPost string) bool {
 	return false
 }
 
+// roomFor 报告再插入 insBytes 字节是否仍在硬上限内；超限时设置提示。
+// 只按新增量估算（被替换部分的长度不另算），宁可保守拒绝。
+func (e *Editor) roomFor(insBytes int) bool {
+	if e.snap().ByteLen()+insBytes <= maxDocBytes {
+		return true
+	}
+	e.status.notice = fmt.Sprintf("已达到 %s 文档上限，插入被忽略", mbSize(maxDocBytes))
+	return false
+}
+
 func (e *Editor) afterEdit() {
-	e.updateStatus()
+	e.updateStatus(false)
 	if e.comp.open {
 		e.refreshCompletion()
 	}
@@ -397,14 +441,24 @@ func (e *Editor) afterEdit() {
 	e.revealCaret()
 }
 
-func (e *Editor) updateStatus() {
+func (e *Editor) updateStatus(force bool) {
 	snap := e.snap()
 	e.status.lines = snap.LineCount()
 	e.status.chars = snap.Len()
-	e.status.err, e.status.pos = nil, Pos{}
+	e.status.degraded = snap.ByteLen() >= degradeBytes
 	if snap.Len() == 0 {
+		e.status.err, e.status.pos = nil, Pos{}
 		return
 	}
+	if e.status.degraded && !force {
+		// 超大文档：不做逐键校验（SetText 打开时仍强制校验一次）。
+		e.status.err, e.status.pos = nil, Pos{}
+		return
+	}
+	if !force && snap.ByteLen() >= debounceBytes && time.Since(e.lastValidate) < validateEvery {
+		return // 大文档防抖：沿用上次校验结果
+	}
+	e.lastValidate = time.Now()
 	pos, err := Validate(snap.String())
 	e.status.pos, e.status.err = pos, err
 }
@@ -748,6 +802,9 @@ func (e *Editor) toggleCompletion() {
 		e.closeCompletion()
 		return
 	}
+	if e.degradedNow() {
+		return // 超大文档：停用结构补全
+	}
 	ctx := ContextAt(e.buf.String(), e.caretRune())
 	if items := Suggest(&ctx, e.mapping); len(items) > 0 {
 		e.comp.open = true
@@ -825,12 +882,17 @@ func (e *Editor) View(c *ui.Context) {
 			ui.Text(c, fmt.Sprintf("%d 行 · %d 字符", e.status.lines, e.status.chars)).
 				FontSize(12).TextColor(t.TextMuted)
 			switch {
+			case e.status.notice != "":
+				ui.Text(c, e.status.notice).FontSize(12).TextColor(t.Danger)
 			case e.status.chars == 0:
 				ui.Text(c, "空").FontSize(12).TextColor(t.TextMuted)
 			case e.status.err != nil:
 				ui.Text(c, fmt.Sprintf("第 %d 行 第 %d 列：%s",
 					e.status.pos.Line, e.status.pos.Col, jsonErrText(e.status.err))).
 					FontSize(12).TextColor(t.Danger)
+			case e.status.degraded:
+				ui.Text(c, "超大文档：已停用实时校验与语法高亮").
+					FontSize(12).TextColor(t.TextMuted)
 			default:
 				ui.Text(c, "JSON 有效").FontSize(12).TextColor(t.Success)
 			}
@@ -993,6 +1055,9 @@ func (e *Editor) lineStartU16(line int) int {
 }
 
 func (e *Editor) tokensFor() []Token {
+	if e.degradedNow() {
+		return nil // 超大文档：不做语法高亮
+	}
 	snap := e.snap()
 	if e.tokenVersion != snap.Version() {
 		e.tokens = Tokenize(snap.String())

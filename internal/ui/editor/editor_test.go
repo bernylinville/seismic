@@ -2,7 +2,9 @@ package editor
 
 import (
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/egoist/mygo/ui"
 )
@@ -557,4 +559,80 @@ func equal(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// ---- 大文档防护 ----
+
+// bigJSON 生成约 n 字节的合法 JSON 文本。
+func bigJSON(n int) string {
+	var b strings.Builder
+	b.WriteString(`{"pad":"`)
+	for b.Len() < n-2 {
+		b.WriteString("x")
+	}
+	b.WriteString(`"}`)
+	return b.String()
+}
+
+func TestEditorSetTextRefusesOversize(t *testing.T) {
+	e := New()
+	e.SetText(`{"a":1}`)
+	e.SetText(bigJSON(maxDocBytes + 1))
+	if e.Text() != `{"a":1}` {
+		t.Fatalf("oversize SetText should be refused, got %q", e.Text()[:32])
+	}
+	if e.status.notice == "" {
+		t.Error("refused SetText should set a notice")
+	}
+}
+
+func TestEditorDegradedSkipsValidateAndHighlight(t *testing.T) {
+	e := New()
+	e.SetText(bigJSON(degradeBytes + 1024)) // 1 MiB+，合法 JSON
+	if !e.status.degraded {
+		t.Fatal("doc over the degrade threshold should be marked degraded")
+	}
+	if e.status.err != nil {
+		t.Errorf("degraded docs skip per-keystroke validation, got err %v", e.status.err)
+	}
+	if toks := e.tokensFor(); toks != nil {
+		t.Errorf("degraded docs skip highlighting, got %d tokens", len(toks))
+	}
+	// SetText 仍强制校验一次：非法的超大文档要能报出错误。
+	e.SetText(strings.Repeat("x", degradeBytes+1024))
+	if e.status.err == nil {
+		t.Error("forced validation on open should report invalid JSON")
+	}
+}
+
+func TestEditorValidateDebounce(t *testing.T) {
+	e := New()
+	e.SetText(bigJSON(debounceBytes + 4096)) // 64 KiB+：防抖区间，未到降级
+	if e.status.err != nil {
+		t.Fatalf("setup: %v", e.status.err)
+	}
+	e.lastValidate = time.Now() // 模拟刚刚校验过
+	e.insert(`x`)              // 防抖窗口内的编辑不触发新校验（err 保持）
+	if e.status.err != nil {
+		t.Fatal("debounced edit should keep the last validation result")
+	}
+	// 窗口过后恢复校验，坏文档报错。
+	time.Sleep(validateEvery + 10*time.Millisecond)
+	e.insert(`y`)
+	if e.status.err == nil {
+		t.Error("validate should resume after the debounce window")
+	}
+}
+
+func TestEditorInsertCap(t *testing.T) {
+	e := New()
+	base := bigJSON(maxDocBytes - 128)
+	e.SetText(base)
+	e.insert(strings.Repeat("y", 256)) // 超过硬上限的插入被忽略
+	if got := e.snap().ByteLen(); got > maxDocBytes {
+		t.Fatalf("insert past the cap should be refused, doc = %d bytes", got)
+	}
+	if e.status.notice == "" {
+		t.Error("refused insert should set a notice")
+	}
 }
