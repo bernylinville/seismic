@@ -201,10 +201,10 @@ func (m *Module) apply(h kit.ModuleHost, key, value string, transient bool) {
 		section = "transient"
 	}
 	body := map[string]any{section: map[string]any{key: parsed}}
-	h.Load(
+	h.Load("settings-put",
 		func() { m.actionErr = "" },
-		func() func() {
-			_, err := client.ClusterPutSettings(context.Background(), body)
+		func(ctx context.Context) func() {
+			_, err := client.ClusterPutSettings(ctx, body)
 			return func() {
 				if err != nil {
 					m.actionErr = kit.Tr(h.Lang(), "修改失败：{0}", kit.ErrMessage(err))
@@ -230,13 +230,13 @@ func (m *Module) load(h kit.ModuleHost) {
 	if client == nil {
 		return
 	}
-	h.Load(
+	h.Load("settings",
 		func() { m.loading = true },
-		func() func() {
+		func(ctx context.Context) func() {
 			var doc map[string]json.RawMessage
 			var rows []settingRow
 			err := func() error {
-				if _, err := client.ClusterGetSettingsInto(context.Background(), &doc); err != nil {
+				if _, err := client.ClusterGetSettingsInto(ctx, &doc); err != nil {
 					return err
 				}
 				var ferr error

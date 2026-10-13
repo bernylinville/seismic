@@ -306,11 +306,11 @@ func (m *Module) send(h kit.ModuleHost) {
 	lang := h.Lang() // 在主线程取一次，worker 里不再读共享状态
 
 	tb.sending = true
-	h.Load(
+	h.Load("rest-send",
 		func() {},
-		func() func() {
+		func(ctx context.Context) func() {
 			start := time.Now()
-			resp, err := client.Request(context.Background(), method, path, param)
+			resp, err := client.Request(ctx, method, path, param)
 
 			dur := time.Since(start).Milliseconds()
 
@@ -397,9 +397,9 @@ func (m *Module) saveQuery(h kit.ModuleHost) {
 		Path:        tb.path,
 		Body:        tb.body,
 	}
-	h.Load(
+	h.Load("rest-save",
 		func() {},
-		func() func() {
+		func(ctx context.Context) func() {
 			_, err := store.SaveQuery(context.Background(), q)
 			saved := m.listSaved(h)
 			return func() {
@@ -419,9 +419,9 @@ func (m *Module) deleteQuery(h kit.ModuleHost, id int64) {
 	if store == nil {
 		return
 	}
-	h.Load(
+	h.Load("rest-delete-query",
 		func() {},
-		func() func() {
+		func(ctx context.Context) func() {
 			err := store.DeleteQuery(context.Background(), h.ClusterKey(), id)
 			saved := m.listSaved(h)
 			return func() {
@@ -441,9 +441,9 @@ func (m *Module) clearHistory(h kit.ModuleHost) {
 	if store == nil {
 		return
 	}
-	h.Load(
+	h.Load("rest-clear-history",
 		func() {},
-		func() func() {
+		func(ctx context.Context) func() {
 			err := store.ClearHistory(context.Background(), h.ClusterKey())
 			return func() {
 				if err != nil {
@@ -460,9 +460,9 @@ func (m *Module) clearHistory(h kit.ModuleHost) {
 // reloadLists refreshes history and saved queries for the active cluster.
 func (m *Module) reloadLists(h kit.ModuleHost) {
 	m.histLoading = true
-	h.Load(
+	h.Load("rest-lists",
 		func() {},
-		func() func() {
+		func(ctx context.Context) func() {
 			hist := m.listHistory(h)
 			saved := m.listSaved(h)
 			return func() {

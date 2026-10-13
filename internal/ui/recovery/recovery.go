@@ -93,11 +93,11 @@ func (m *Module) load(h kit.ModuleHost) {
 	if client == nil {
 		return
 	}
-	h.Load(
+	h.Load("recovery",
 		func() { m.loading = true; m.err = nil },
-		func() func() {
+		func(ctx context.Context) func() {
 			var rows []Row
-			_, err := client.RequestJSON(context.Background(), "GET", "_cat/recovery", map[string]any{
+			_, err := client.RequestJSON(ctx, "GET", "_cat/recovery", map[string]any{
 				"format": "json",
 				"s":      "start_time_millis:desc",
 				"h":      "index,shard,type,stage,source,node,start_time",

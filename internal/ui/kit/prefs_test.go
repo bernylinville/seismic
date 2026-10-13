@@ -22,7 +22,7 @@ func (s *stubHost) Version() string                    { return "" }
 func (s *stubHost) Distribution() string               { return "elasticsearch" }
 func (s *stubHost) DB() *db.Store                      { return s.db }
 func (s *stubHost) Lang() string                       { return "zh" }
-func (s *stubHost) Load(mark func(), fn func() func()) { mark(); fn()() }
+func (s *stubHost) Load(key string, mark func(), fn func(context.Context) func()) { mark(); fn(context.Background())() }
 
 func newHost(t *testing.T) *stubHost {
 	t.Helper()

@@ -134,8 +134,8 @@ func (m *Module) load(h kit.ModuleHost) {
 	if client == nil {
 		return
 	}
-	h.Load(func() { m.loading = true }, func() func() {
-		rows, err := fetchRoles(client)
+	h.Load("roles", func() { m.loading = true }, func(ctx context.Context) func() {
+		rows, err := fetchRoles(ctx, client)
 		return func() {
 			m.loading = false
 			m.loadedOnce = true
@@ -150,9 +150,9 @@ func (m *Module) load(h kit.ModuleHost) {
 	})
 }
 
-func fetchRoles(client *es.Client) ([]roleRow, error) {
+func fetchRoles(ctx context.Context, client *es.Client) ([]roleRow, error) {
 	var raw map[string]json.RawMessage
-	if _, err := client.SecurityRolesInto(context.Background(), &raw); err != nil {
+	if _, err := client.SecurityRolesInto(ctx, &raw); err != nil {
 		return nil, err
 	}
 	rows := make([]roleRow, 0, len(raw))
@@ -340,8 +340,8 @@ func (m *Module) putRole(h kit.ModuleHost, name, okKey, failKey string) {
 		m.actionMsg, m.actionErr = kit.Tr(h.Lang(), failKey, name, err.Error()), true
 		return
 	}
-	h.Load(func() { m.busy = true }, func() func() {
-		_, err := client.SecurityRolePut(context.Background(), name, body)
+	h.Load("roles-put", func() { m.busy = true }, func(ctx context.Context) func() {
+		_, err := client.SecurityRolePut(ctx, name, body)
 		return func() {
 			m.report(h, okKey, failKey, name, err)
 			if err == nil {
@@ -371,8 +371,8 @@ func (m *Module) deleteRole(h kit.ModuleHost) {
 		return
 	}
 	name := m.confirmName
-	h.Load(func() { m.busy = true; m.confirmOpen = false }, func() func() {
-		_, err := client.SecurityRoleDelete(context.Background(), name)
+	h.Load("roles-delete", func() { m.busy = true; m.confirmOpen = false }, func(ctx context.Context) func() {
+		_, err := client.SecurityRoleDelete(ctx, name)
 		return func() {
 			m.report(h, "已删除角色 {0}", "删除角色 {0}失败：{1}", name, err)
 			if err == nil {

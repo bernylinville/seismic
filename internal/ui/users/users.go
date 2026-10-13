@@ -117,8 +117,8 @@ func (m *Module) load(h kit.ModuleHost) {
 	if client == nil {
 		return
 	}
-	h.Load(func() { m.loading = true }, func() func() {
-		rows, err := fetchUsers(client)
+	h.Load("users", func() { m.loading = true }, func(ctx context.Context) func() {
+		rows, err := fetchUsers(ctx, client)
 		return func() {
 			m.loading = false
 			m.loadedOnce = true
@@ -130,9 +130,9 @@ func (m *Module) load(h kit.ModuleHost) {
 	})
 }
 
-func fetchUsers(client *es.Client) ([]userRow, error) {
+func fetchUsers(ctx context.Context, client *es.Client) ([]userRow, error) {
 	var raw map[string]esUser
-	if _, err := client.SecurityUsersInto(context.Background(), &raw); err != nil {
+	if _, err := client.SecurityUsersInto(ctx, &raw); err != nil {
 		return nil, err
 	}
 	rows := make([]userRow, 0, len(raw))
@@ -199,8 +199,8 @@ func (m *Module) createUser(h kit.ModuleHost) {
 	}
 	name := strings.TrimSpace(m.form.Username)
 	body := userBody(m.form, h.Version(), true)
-	h.Load(func() { m.busy = true }, func() func() {
-		_, err := client.SecurityUserPut(context.Background(), name, body)
+	h.Load("users-put", func() { m.busy = true }, func(ctx context.Context) func() {
+		_, err := client.SecurityUserPut(ctx, name, body)
 		return func() {
 			m.report(h, "已创建用户 {0}", "创建用户 {0}失败：{1}", name, err)
 			if err == nil {
@@ -220,8 +220,8 @@ func (m *Module) updateUser(h kit.ModuleHost) {
 	}
 	name := strings.TrimSpace(m.form.Username)
 	body := userBody(m.form, h.Version(), m.form.Password != "")
-	h.Load(func() { m.busy = true }, func() func() {
-		_, err := client.SecurityUserPut(context.Background(), name, body)
+	h.Load("users-put", func() { m.busy = true }, func(ctx context.Context) func() {
+		_, err := client.SecurityUserPut(ctx, name, body)
 		return func() {
 			m.report(h, "已更新用户 {0}", "更新用户 {0}失败：{1}", name, err)
 			if err == nil {
@@ -240,8 +240,8 @@ func (m *Module) changePassword(h kit.ModuleHost) {
 	}
 	name := strings.TrimSpace(m.form.Username)
 	body := map[string]any{"password": m.form.Password}
-	h.Load(func() { m.busy = true }, func() func() {
-		_, err := client.SecurityUserPutPassword(context.Background(), name, body)
+	h.Load("users-password", func() { m.busy = true }, func(ctx context.Context) func() {
+		_, err := client.SecurityUserPutPassword(ctx, name, body)
 		return func() {
 			m.report(h, "已修改 {0} 的密码", "修改 {0} 的密码失败：{1}", name, err)
 			if err == nil {
@@ -259,8 +259,8 @@ func (m *Module) deleteUser(h kit.ModuleHost) {
 		return
 	}
 	name := m.confirmName
-	h.Load(func() { m.busy = true; m.confirmOpen = false }, func() func() {
-		_, err := client.SecurityUserDelete(context.Background(), name)
+	h.Load("users-delete", func() { m.busy = true; m.confirmOpen = false }, func(ctx context.Context) func() {
+		_, err := client.SecurityUserDelete(ctx, name)
 		return func() {
 			m.report(h, "已删除用户 {0}", "删除用户 {0}失败：{1}", name, err)
 			if err == nil {

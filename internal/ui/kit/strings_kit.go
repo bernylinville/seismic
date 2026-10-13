@@ -30,5 +30,9 @@ func init() {
 		"保存":   "Save",
 		"取消":   "Cancel",
 		"操作":   "Actions",
+
+		"加载中…":                    "Loading…",
+		"请求失败":                    "Request failed",
+		"已取消（切换了连接或被新查询取代）": "Cancelled (connection switched or superseded)",
 	})
 }

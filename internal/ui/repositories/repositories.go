@@ -213,9 +213,9 @@ func (m *Module) load(h kit.ModuleHost) {
 	if client == nil {
 		return
 	}
-	run(h, func() { m.loading = true }, func() ([]RepoRow, error) {
+	run(h, "repositories", func() { m.loading = true }, func(ctx context.Context) ([]RepoRow, error) {
 		var entries map[string]repoEntry
-		if _, err := client.CatRepositoriesInto(context.Background(), nil, &entries); err != nil {
+		if _, err := client.CatRepositoriesInto(ctx, nil, &entries); err != nil {
 			return nil, err
 		}
 		rows := make([]RepoRow, 0, len(entries))
@@ -249,8 +249,8 @@ func (m *Module) create(h kit.ModuleHost) {
 	}
 	body := map[string]any{"type": m.newType, "settings": settings}
 	m.newErr = ""
-	run(h, func() {}, func() (*es.Response, error) {
-		return client.SnapshotCreateRepository(context.Background(), m.newName, body)
+	run(h, "repositories-action", func() {}, func(ctx context.Context) (*es.Response, error) {
+		return client.SnapshotCreateRepository(ctx, m.newName, body)
 	}, func(_ *es.Response, err error) {
 
 		if err == nil {
@@ -267,8 +267,8 @@ func (m *Module) verify(h kit.ModuleHost, name string) {
 	if client == nil {
 		return
 	}
-	run(h, func() { m.loading = true }, func() (*es.Response, error) {
-		return client.Request(context.Background(), "GET", "_snapshot/"+name+"/_verify", nil)
+	run(h, "repositories-action", func() { m.loading = true }, func(ctx context.Context) (*es.Response, error) {
+		return client.Request(ctx, "GET", "_snapshot/"+name+"/_verify", nil)
 	}, func(_ *es.Response, err error) {
 		m.loading = false
 		if err == nil {
@@ -286,8 +286,8 @@ func (m *Module) delete(h kit.ModuleHost) {
 		return
 	}
 
-	run(h, func() { m.actionErr, m.actionMsg = "", "" }, func() (*es.Response, error) {
-		return client.SnapshotDeleteRepository(context.Background(), name)
+	run(h, "repositories-action", func() { m.actionErr, m.actionMsg = "", "" }, func(ctx context.Context) (*es.Response, error) {
+		return client.SnapshotDeleteRepository(ctx, name)
 	}, func(_ *es.Response, err error) {
 
 		if err == nil {
@@ -300,10 +300,10 @@ func (m *Module) delete(h kit.ModuleHost) {
 }
 
 // run wraps h.Load: fn runs off-thread, the returned closure applies its
-// result on the main thread.
-func run[T any](h kit.ModuleHost, mark func(), fn func() (T, error), apply func(T, error)) {
-	h.Load(mark, func() func() {
-		v, err := fn()
+// result on the main thread. key 是取消槽位（同 key 新加载取消旧的）。
+func run[T any](h kit.ModuleHost, key string, mark func(), fn func(ctx context.Context) (T, error), apply func(T, error)) {
+	h.Load(key, mark, func(ctx context.Context) func() {
+		v, err := fn(ctx)
 		return func() {
 			apply(v, err)
 		}

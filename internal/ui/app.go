@@ -5,6 +5,7 @@ package ui
 import (
 	"context"
 	"strings"
+	"sync"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -82,6 +83,9 @@ type App struct {
 
 	deps        Deps
 	client      *es.Client
+	// loads 跟踪在途模块加载的取消句柄（loadsMu 保护；见 support.go load）。
+	loadsMu sync.Mutex
+	loads   map[string]*loadSlot
 	clusterUUID string
 	connecting  bool
 

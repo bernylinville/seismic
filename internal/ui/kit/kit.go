@@ -3,6 +3,9 @@
 package kit
 
 import (
+	"context"
+	"errors"
+
 	"github.com/egoist/mygo/ui"
 
 	"seismic/internal/db"
@@ -27,7 +30,11 @@ type ModuleHost interface {
 	Lang() string
 	// Load runs fn off-thread; markLoading flips a loading flag first and
 	// fn returns the closure that applies the result on the main thread.
-	Load(markLoading func(), fn func() func())
+	// key identifies the logical load: starting a new load with the same
+	// key cancels the in-flight one (re-queries don't pile up), and a
+	// cluster switch cancels everything. Workers must pass ctx to their
+	// ES calls so cancellation aborts the request.
+	Load(key string, markLoading func(), fn func(ctx context.Context) func())
 }
 
 // ErrMessage flattens an error for display, surfacing the ES error body.
@@ -69,6 +76,10 @@ func StateText(c *ui.Context, lang string, loading bool, err error, empty bool, 
 		ui.Text(c, Tr(lang, "加载中…")).TextColor(t.TextMuted)
 		return true
 	case err != nil:
+		if errors.Is(err, context.Canceled) {
+			ui.Text(c, Tr(lang, "已取消（切换了连接或被新查询取代）")).TextColor(t.TextMuted)
+			return true
+		}
 		ui.Column(c).Grow(1).Padding(16).Children(func() {
 			ui.Text(c, Tr(lang, "请求失败")).Bold().TextColor(ui.Hex("#d64545"))
 			ui.Text(c, ErrMessage(err)).TextColor(t.TextMuted).FontSize(12)

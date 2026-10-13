@@ -30,9 +30,9 @@ func (f *fakeHost) Version() string      { return "8.14.1" }
 func (f *fakeHost) Distribution() string { return "elasticsearch" }
 func (f *fakeHost) BuildFlavor() string  { return "" }
 func (f *fakeHost) DB() *db.Store        { return f.store }
-func (f *fakeHost) Load(mark func(), fn func() func()) {
+func (f *fakeHost) Load(key string, mark func(), fn func(context.Context) func()) {
 	mark()
-	if apply := fn(); apply != nil {
+	if apply := fn(context.Background()); apply != nil {
 		apply()
 	}
 }

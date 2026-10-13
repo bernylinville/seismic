@@ -454,11 +454,11 @@ func (m *Module) loadRepos(h kit.ModuleHost) {
 	if client == nil {
 		return
 	}
-	run(h, func() { m.repoLoading = true }, func() ([]string, error) {
+	run(h, "snapshots-repos", func() { m.repoLoading = true }, func(ctx context.Context) ([]string, error) {
 		var entries map[string]struct {
 			Type string `json:"type"`
 		}
-		if _, err := client.CatRepositoriesInto(context.Background(), nil, &entries); err != nil {
+		if _, err := client.CatRepositoriesInto(ctx, nil, &entries); err != nil {
 			return nil, err
 		}
 		names := make([]string, 0, len(entries))
@@ -486,9 +486,9 @@ func (m *Module) loadSnaps(h kit.ModuleHost) {
 	if client == nil || m.repo == "" {
 		return
 	}
-	run(h, func() { m.loading = true }, func() ([]snapEntry, error) {
+	run(h, "snapshots", func() { m.loading = true }, func(ctx context.Context) ([]snapEntry, error) {
 		var list snapList
-		if _, err := client.CatSnapshotsInto(context.Background(), m.repo, &list); err != nil {
+		if _, err := client.CatSnapshotsInto(ctx, m.repo, &list); err != nil {
 			return nil, err
 		}
 		return list.Snapshots, nil
@@ -507,14 +507,14 @@ func (m *Module) loadSlm(h kit.ModuleHost) {
 	if client == nil {
 		return
 	}
-	run3(h, func() { m.slmLoading = true }, func() (slmList, string, error) {
+	run3(h, "snapshots-slm", func() { m.slmLoading = true }, func(ctx context.Context) (slmList, string, error) {
 		var policies slmList
-		if _, err := client.CatSlmPoliciesInto(context.Background(), &policies); err != nil {
+		if _, err := client.CatSlmPoliciesInto(ctx, &policies); err != nil {
 			return nil, "", err
 		}
 		mode := ""
 		var s slmStatus
-		if _, err := client.SlmGetStatusInto(context.Background(), &s); err == nil {
+		if _, err := client.SlmGetStatusInto(ctx, &s); err == nil {
 			mode = s.OperationMode
 		}
 		return policies, mode, nil
@@ -539,9 +539,9 @@ func (m *Module) showDetail(h kit.ModuleHost, name string) {
 		return
 	}
 	m.detailName = name
-	run(h, func() { m.detailBusy = true }, func() (*snapEntry, error) {
+	run(h, "snapshots-detail", func() { m.detailBusy = true }, func(ctx context.Context) (*snapEntry, error) {
 		var list snapList
-		if _, err := client.GetSnapshotInto(context.Background(), m.repo, name, &list); err != nil {
+		if _, err := client.GetSnapshotInto(ctx, m.repo, name, &list); err != nil {
 			return nil, err
 		}
 		if len(list.Snapshots) == 0 {
@@ -564,8 +564,8 @@ func (m *Module) deleteSnapshot(h kit.ModuleHost, name string) {
 	if client == nil {
 		return
 	}
-	run(h, func() { m.actionErr, m.actionMsg = "", "" }, func() (*es.Response, error) {
-		return client.SnapshotDelete(context.Background(), m.repo, name)
+	run(h, "snapshots-action", func() { m.actionErr, m.actionMsg = "", "" }, func(ctx context.Context) (*es.Response, error) {
+		return client.SnapshotDelete(ctx, m.repo, name)
 	}, func(_ *es.Response, err error) {
 		if err == nil {
 			if m.detailName == name {
@@ -596,8 +596,8 @@ func (m *Module) restore(h kit.ModuleHost) {
 	if m.restoreIgnoreUnavailable {
 		body["ignore_unavailable"] = true
 	}
-	run(h, func() { m.actionErr, m.actionMsg = "", "" }, func() (*es.Response, error) {
-		return client.SnapshotRestore(context.Background(), m.repo, m.restoreName, body)
+	run(h, "snapshots-action", func() { m.actionErr, m.actionMsg = "", "" }, func(ctx context.Context) (*es.Response, error) {
+		return client.SnapshotRestore(ctx, m.repo, m.restoreName, body)
 	}, func(_ *es.Response, err error) {
 		if err == nil {
 			m.restoreOpen = false
@@ -622,8 +622,8 @@ func (m *Module) create(h kit.ModuleHost) {
 		indices = []string{"*"}
 	}
 	body := map[string]any{"indices": indices, "ignore_unavailable": m.newIgnoreUnavailable}
-	run(h, func() { m.actionErr, m.actionMsg = "", "" }, func() (*es.Response, error) {
-		return client.SnapshotCreate(context.Background(), m.repo, m.newName, body)
+	run(h, "snapshots-action", func() { m.actionErr, m.actionMsg = "", "" }, func(ctx context.Context) (*es.Response, error) {
+		return client.SnapshotCreate(ctx, m.repo, m.newName, body)
 	}, func(_ *es.Response, err error) {
 		if err == nil {
 			m.newOpen = false
@@ -639,8 +639,8 @@ func (m *Module) executeSlm(h kit.ModuleHost, id string) {
 	if client == nil {
 		return
 	}
-	run(h, func() { m.actionErr, m.actionMsg = "", "" }, func() (*es.Response, error) {
-		return client.SlmExecutePolicy(context.Background(), id)
+	run(h, "snapshots-action", func() { m.actionErr, m.actionMsg = "", "" }, func(ctx context.Context) (*es.Response, error) {
+		return client.SlmExecutePolicy(ctx, id)
 	}, func(_ *es.Response, err error) {
 		if err == nil {
 			m.actionMsg = kit.Tr(h.Lang(), "已执行策略 {0}", id)
@@ -655,8 +655,8 @@ func (m *Module) deleteSlm(h kit.ModuleHost, id string) {
 	if client == nil {
 		return
 	}
-	run(h, func() { m.actionErr, m.actionMsg = "", "" }, func() (*es.Response, error) {
-		return client.SlmDeletePolicy(context.Background(), id)
+	run(h, "snapshots-action", func() { m.actionErr, m.actionMsg = "", "" }, func(ctx context.Context) (*es.Response, error) {
+		return client.SlmDeletePolicy(ctx, id)
 	}, func(_ *es.Response, err error) {
 		if err == nil {
 			m.loadSlm(h)
@@ -684,8 +684,8 @@ func (m *Module) createSlm(h kit.ModuleHost) {
 		"repository": m.slmNewRepo,
 		"config":     map[string]any{"indices": indices},
 	}
-	run(h, func() { m.actionErr, m.actionMsg = "", "" }, func() (*es.Response, error) {
-		return client.SlmPutPolicy(context.Background(), m.slmNewName, body)
+	run(h, "snapshots-action", func() { m.actionErr, m.actionMsg = "", "" }, func(ctx context.Context) (*es.Response, error) {
+		return client.SlmPutPolicy(ctx, m.slmNewName, body)
 	}, func(_ *es.Response, err error) {
 		if err == nil {
 			m.slmNewOpen = false
@@ -697,19 +697,19 @@ func (m *Module) createSlm(h kit.ModuleHost) {
 }
 
 // run wraps h.Load: fn runs off-thread, the returned closure applies its
-// result on the main thread.
-func run[T any](h kit.ModuleHost, mark func(), fn func() (T, error), apply func(T, error)) {
-	h.Load(mark, func() func() {
-		v, err := fn()
+// result on the main thread. key 是取消槽位（同 key 新加载取消旧的）。
+func run[T any](h kit.ModuleHost, key string, mark func(), fn func(ctx context.Context) (T, error), apply func(T, error)) {
+	h.Load(key, mark, func(ctx context.Context) func() {
+		v, err := fn(ctx)
 		return func() {
 			apply(v, err)
 		}
 	})
 }
 
-func run3[A, B any](h kit.ModuleHost, mark func(), fn func() (A, B, error), apply func(A, B, error)) {
-	h.Load(mark, func() func() {
-		a, b, err := fn()
+func run3[A, B any](h kit.ModuleHost, key string, mark func(), fn func(ctx context.Context) (A, B, error), apply func(A, B, error)) {
+	h.Load(key, mark, func(ctx context.Context) func() {
+		a, b, err := fn(ctx)
 		return func() {
 			apply(a, b, err)
 		}

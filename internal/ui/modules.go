@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"context"
+
 	"github.com/egoist/mygo/ui"
 
 	"seismic/internal/db"
@@ -35,7 +37,9 @@ func (a *App) SetLang(lang string) { a.lang = lang }
 func (a *App) Lang() string { return a.lang }
 
 // Load satisfies kit.ModuleHost.
-func (a *App) Load(markLoading func(), fn func() func()) { a.load(markLoading, fn) }
+func (a *App) Load(key string, markLoading func(), fn func(context.Context) func()) {
+	a.load(key, markLoading, fn)
+}
 
 // modulePage routes to a module's builder. Indices stays in this package as
 // the exemplar; the rest each own a package under internal/ui/<module>.

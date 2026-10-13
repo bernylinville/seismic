@@ -132,11 +132,11 @@ func (m *Module) load(h kit.ModuleHost) {
 	if client == nil {
 		return
 	}
-	h.Load(
+	h.Load("shards",
 		func() { m.loading = true; m.err = nil },
-		func() func() {
+		func(ctx context.Context) func() {
 			var rows []Row
-			_, err := client.CatShardsInto(context.Background(), map[string]any{
+			_, err := client.CatShardsInto(ctx, map[string]any{
 				"format": "json",
 				"h":      "index,shard,prirep,state,docs,store,node,unassigned.reason",
 			}, m.filterIndex(), &rows)
@@ -188,10 +188,10 @@ func (m *Module) reroute(h kit.ModuleHost, shard Row, targetNode string) {
 			"allow_primary": true,
 		}}
 	}
-	h.Load(
+	h.Load("shards-action",
 		func() { m.actionErr = "" },
-		func() func() {
-			_, err := client.ClusterReroute(context.Background(), []any{cmd})
+		func(ctx context.Context) func() {
+			_, err := client.ClusterReroute(ctx, []any{cmd})
 			return func() {
 				if err != nil {
 					m.actionErr = kit.Tr(h.Lang(), "重新分配失败：{0}", kit.ErrMessage(err))

@@ -1,6 +1,7 @@
 package overview
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -25,9 +26,9 @@ func (f *fakeHost) Version() string      { return "8.14.1" }
 func (f *fakeHost) Distribution() string { return "elasticsearch" }
 func (f *fakeHost) BuildFlavor() string  { return "" }
 func (f *fakeHost) DB() *db.Store        { return nil }
-func (f *fakeHost) Load(mark func(), fn func() func()) {
+func (f *fakeHost) Load(key string, mark func(), fn func(context.Context) func()) {
 	mark()
-	fn()()
+	fn(context.Background())()
 }
 func (f *fakeHost) Lang() string { return f.lang }
 

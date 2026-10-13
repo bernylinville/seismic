@@ -297,10 +297,10 @@ func (m *Module) showDetail(h kit.ModuleHost, row templateRow) {
 		return
 	}
 	m.detailName = row.name
-	h.Load(
+	h.Load("templates-detail",
 		func() { m.detailLoading = true },
-		func() func() {
-			resp, err := client.Request(context.Background(), "GET", m.endpoint(h)+"/"+es.CleanIndexName(row.name), nil)
+		func(ctx context.Context) func() {
+			resp, err := client.Request(ctx, "GET", m.endpoint(h)+"/"+es.CleanIndexName(row.name), nil)
 			return func() {
 				m.detailLoading = false
 				if err != nil {
@@ -320,10 +320,10 @@ func (m *Module) run(h kit.ModuleHost, name string, fn func(ctx context.Context,
 	if client == nil {
 		return
 	}
-	h.Load(
+	h.Load("templates-action",
 		func() { m.actionErr = "" },
-		func() func() {
-			err := fn(context.Background(), client)
+		func(ctx context.Context) func() {
+			err := fn(ctx, client)
 			return func() {
 				if err != nil {
 					m.actionErr = kit.Tr(h.Lang(), "{0}失败：{1}", kit.Tr(h.Lang(), name), kit.ErrMessage(err))
@@ -341,18 +341,18 @@ func (m *Module) load(h kit.ModuleHost) {
 		return
 	}
 	m.composable = es.VersionAtLeast(h.Version(), "7.0.0")
-	h.Load(
+	h.Load("templates",
 		func() { m.loading = true },
-		func() func() {
+		func(ctx context.Context) func() {
 			legacyRows, legacyErr := fetchTemplates(func(out any) error {
-				_, err := client.TemplateInto(context.Background(), out)
+				_, err := client.TemplateInto(ctx, out)
 				return err
 			})
 			var compRows []templateRow
 			var compErr error
 			if m.composable {
 				compRows, compErr = fetchComposable(func(out any) error {
-					_, err := client.IndexTemplateInto(context.Background(), out)
+					_, err := client.IndexTemplateInto(ctx, out)
 					return err
 				})
 			}

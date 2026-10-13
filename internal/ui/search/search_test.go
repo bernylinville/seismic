@@ -1,6 +1,7 @@
 package search
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -28,9 +29,9 @@ func (f *fakeHost) Distribution() string { return "elasticsearch" }
 func (f *fakeHost) BuildFlavor() string  { return "" }
 func (f *fakeHost) DB() *db.Store        { return nil }
 func (f *fakeHost) Lang() string         { return f.lang }
-func (f *fakeHost) Load(mark func(), fn func() func()) {
+func (f *fakeHost) Load(key string, mark func(), fn func(context.Context) func()) {
 	mark()
-	fn()()
+	fn(context.Background())()
 }
 
 const testHits = `{"took":5,"hits":{"total":{"value":35},"hits":[

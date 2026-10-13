@@ -107,16 +107,16 @@ func (a *App) indicesLoad() {
 	if client == nil {
 		return
 	}
-	a.load(
+	a.load("indices",
 		func() { s.loading = true },
-		func() func() {
+		func(ctx context.Context) func() {
 			rows, err := func() ([]IndexRow, error) {
 				params := map[string]any{
 					"bytes": "b", "format": "json",
 					"h": "index,health,status,docs.count,store.size,pri,rep,creation.date.string",
 				}
 				var rows []IndexRow
-				if _, err := client.CatIndicesInto(context.Background(), params, "", &rows); err != nil {
+				if _, err := client.CatIndicesInto(ctx, params, "", &rows); err != nil {
 					return nil, err
 				}
 				return rows, nil
@@ -140,10 +140,10 @@ func (a *App) indicesAction(name, index string, fn func(ctx context.Context, cli
 	if client == nil || index == "" {
 		return
 	}
-	a.load(
+	a.load("indices-action",
 		func() { s.detailLoading = true; s.actionErr = "" },
-		func() func() {
-			err := fn(context.Background(), client, index)
+		func(ctx context.Context) func() {
+			err := fn(ctx, client, index)
 			return func() {
 				s.detailLoading = false
 				if err != nil {
@@ -163,10 +163,10 @@ func (a *App) indicesShowDetail(index string) {
 		return
 	}
 	s.detailName = index
-	a.load(
+	a.load("indices-detail",
 		func() { s.detailLoading = true },
-		func() func() {
-			resp, err := client.Request(context.Background(), "GET", esClean(index)+"/_settings", nil)
+		func(ctx context.Context) func() {
+			resp, err := client.Request(ctx, "GET", esClean(index)+"/_settings", nil)
 			return func() {
 				s.detailLoading = false
 				if err != nil {

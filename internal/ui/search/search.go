@@ -150,13 +150,13 @@ func (m *Module) loadIndices(h kit.ModuleHost) {
 	if client == nil {
 		return
 	}
-	h.Load(
+	h.Load("search-indices",
 		func() { m.loadedOnce = true },
-		func() func() {
+		func(ctx context.Context) func() {
 			var rows []struct {
 				Index string `json:"index"`
 			}
-			_, err := client.CatIndicesInto(context.Background(), map[string]any{
+			_, err := client.CatIndicesInto(ctx, map[string]any{
 				"format": "json", "h": "index",
 			}, "", &rows)
 			var names []string
@@ -209,14 +209,14 @@ func (m *Module) run(h kit.ModuleHost) {
 	}
 	m.formatErr = ""
 	m.selectedRow = -1
-	h.Load(
+	h.Load("search",
 		func() { m.loading = true; m.ranOnce = true },
-		func() func() {
+		func(ctx context.Context) func() {
 			var res *searchResponse
 			var err error
 			if res, err = func() (*searchResponse, error) {
 				out := &searchResponse{}
-				if _, err := client.SearchInto(context.Background(), body, m.searchIndices(), nil, out); err != nil {
+				if _, err := client.SearchInto(ctx, body, m.searchIndices(), nil, out); err != nil {
 					return nil, err
 				}
 				return out, nil
@@ -357,11 +357,11 @@ func (m *Module) loadMapping(h kit.ModuleHost) {
 		return
 	}
 	m.mappedPattern = pattern
-	h.Load(
+	h.Load("search-mapping",
 		func() {},
-		func() func() {
+		func(ctx context.Context) func() {
 			var reply map[string]mappingReply
-			_, err := client.RequestJSON(context.Background(), "GET",
+			_, err := client.RequestJSON(ctx, "GET",
 				es.CleanIndexName(pattern)+"/_mapping?allow_no_indices=true&ignore_unavailable=true", nil, &reply)
 			if err != nil {
 				return func() {}

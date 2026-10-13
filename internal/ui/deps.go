@@ -54,6 +54,9 @@ func (a *App) connectTo(c conn.Connection) {
 				return
 			}
 			a.Connected = true
+			if a.client != client {
+				a.cancelAllLoads() // 换集群：旧集群的在途请求全部取消
+			}
 			a.client = client
 			a.clusterUUID = info.UUID
 			a.ClusterName = pick(c.Name, info.ClusterName)

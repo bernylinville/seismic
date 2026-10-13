@@ -71,10 +71,9 @@ func (m *Module) load(h kit.ModuleHost) {
 	if client == nil {
 		return
 	}
-	h.Load(
+	h.Load("overview",
 		func() { m.loading = true },
-		func() func() {
-			ctx := context.Background()
+		func(ctx context.Context) func() {
 			var info clusterInfo
 			var health clusterHealth
 			var stats clusterStats
