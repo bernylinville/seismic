@@ -812,16 +812,16 @@ func (e *Editor) View(c *ui.Context) {
 	e.clampScroll()
 	e.revealCaret()
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Key("frame").Grow(1).
+		ui.Row(c.Key("frame")).Grow(1).
 			Background(t.Surface).Border(1, t.Border).Radius(t.Radius).Clip().Children(func() {
-			ui.Box(c).Key("gutter").Width(gutterWidth).FillHeight().Draw(e.drawGutter)
-			ui.Box(c).Key("code").Grow(1).FillHeight().
+			ui.Box(c.Key("gutter")).Width(gutterWidth).FillHeight().Draw(e.drawGutter)
+			ui.Box(c.Key("code")).Grow(1).FillHeight().
 				Label("JSON 编辑器").Role(ui.RoleTextField).Value(e.buf.String()).
 				Cursor(ui.CursorText).
 				HandleTextInput(e).HandleInput(e.handleInput).
 				Draw(e.drawContent).DrawOver(e.drawPopup)
 		})
-		ui.Row(c).Key("status").Padding(6, 10).Gap(12).Children(func() {
+		ui.Row(c.Key("status")).Padding(6, 10).Gap(12).Children(func() {
 			ui.Text(c, fmt.Sprintf("%d 行 · %d 字符", e.status.lines, e.status.chars)).
 				FontSize(12).TextColor(t.TextMuted)
 			switch {
