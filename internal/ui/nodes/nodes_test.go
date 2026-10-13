@@ -150,3 +150,33 @@ func TestNodesDetailHidesSystemAttributes(t *testing.T) {
 		t.Errorf("system attributes still hidden: %s", m.detailJSON)
 	}
 }
+
+// TestVisibleRowsCached checks the visible-rows cache: unchanged inputs reuse
+// the computed slice, input changes recompute.
+func TestVisibleRowsCached(t *testing.T) {
+	m := New()
+	m.rows = []NodeRow{
+		{Name: flexString("node-b")},
+		{Name: flexString("node-a")},
+	}
+
+	r1 := m.visibleRows()
+	r2 := m.visibleRows()
+	if r1[0].Name.String() != "node-a" || len(r1) != 2 {
+		t.Fatalf("visibleRows = %+v", r1)
+	}
+	if &r1[0] != &r2[0] {
+		t.Error("unchanged inputs should reuse the cached slice")
+	}
+
+	m.filter = "node-b"
+	if got := m.visibleRows(); len(got) != 1 || got[0].Name.String() != "node-b" {
+		t.Errorf("filter change not applied: %+v", got)
+	}
+
+	m.filter = ""
+	m.rows = []NodeRow{{Name: flexString("z")}, {Name: flexString("a")}}
+	if got := m.visibleRows(); got[0].Name.String() != "a" {
+		t.Errorf("rows swap left a stale cache: %+v", got)
+	}
+}

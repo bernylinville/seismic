@@ -41,6 +41,20 @@ type Module struct {
 	// (节点, 是否隐藏系统属性) 渲染好的 JSON。
 	nodeCache    map[string]map[string]any
 	displayCache map[displayKey]string
+
+	// visibleRows 的缓存：输入（rows/filter/sort）不变时复用，
+	// 避免每帧全量过滤+排序。
+	visValid  bool
+	visCache  []NodeRow
+	visFilter string
+	visSort   ui.SortOrder
+	visRows   []NodeRow
+}
+
+// sameRows reports whether two slices share identity (backing array and
+// length); rows are only ever replaced wholesale after a reload.
+func sameRows(a, b []NodeRow) bool {
+	return len(a) == len(b) && (len(a) == 0 || &a[0] == &b[0])
 }
 
 // New makes the module's state.
@@ -92,6 +106,9 @@ func (f *flexString) UnmarshalJSON(b []byte) error {
 func (f flexString) String() string { return string(f) }
 
 func (m *Module) visibleRows() []NodeRow {
+	if m.visValid && m.visFilter == m.filter && m.visSort == m.sort && sameRows(m.visRows, m.rows) {
+		return m.visCache
+	}
 	out := make([]NodeRow, 0, len(m.rows))
 	for _, r := range m.rows {
 		if m.filter != "" && !filterMatch(r, m.filter) {
@@ -120,6 +137,8 @@ func (m *Module) visibleRows() []NodeRow {
 		}
 		return res
 	})
+	m.visValid, m.visCache = true, out
+	m.visFilter, m.visSort, m.visRows = m.filter, m.sort, m.rows
 	return out
 }
 

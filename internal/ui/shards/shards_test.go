@@ -191,3 +191,39 @@ func TestShardsFilter(t *testing.T) {
 		t.Errorf("metrics missing; texts %q", tt.Texts())
 	}
 }
+
+// TestVisibleRowsCached checks the visible-rows cache: unchanged inputs reuse
+// the computed slice, input changes recompute.
+func TestVisibleRowsCached(t *testing.T) {
+	m := New()
+	m.rows = []Row{
+		{Index: "logs-2024", Shard: "0", Prirep: "p", State: "STARTED"},
+		{Index: "metrics", Shard: "0", Prirep: "p", State: "STARTED"},
+	}
+
+	r1 := m.visibleRows()
+	r2 := m.visibleRows()
+	if r1[0].Index != "logs-2024" || len(r1) != 2 {
+		t.Fatalf("visibleRows = %+v", r1)
+	}
+	if &r1[0] != &r2[0] {
+		t.Error("unchanged inputs should reuse the cached slice")
+	}
+
+	m.filter = "MET" // filter lowercases both sides
+	if got := m.visibleRows(); len(got) != 1 || got[0].Index != "metrics" {
+		t.Errorf("filter change not applied: %+v", got)
+	}
+
+	m.filter = ""
+	m.sort = ui.SortOrder{Descending: true}
+	if got := m.visibleRows(); got[0].Index != "metrics" {
+		t.Errorf("sort change not applied: %+v", got)
+	}
+
+	m.sort = ui.SortOrder{}
+	m.rows = []Row{{Index: "b"}, {Index: "a"}}
+	if got := m.visibleRows(); got[0].Index != "a" {
+		t.Errorf("rows swap left a stale cache: %+v", got)
+	}
+}

@@ -53,12 +53,29 @@ type Module struct {
 	// rerouting is the shard awaiting a target-node pick, nil 为无.
 	rerouting *Row
 	actionErr string
+
+	// visibleRows 的缓存：输入（rows/filter/sort）不变时复用，
+	// 避免每帧对大集群的全量分片做过滤+排序。
+	visValid  bool
+	visCache  []Row
+	visFilter string
+	visSort   ui.SortOrder
+	visRows   []Row
 }
 
 // New makes the module's state.
 func New() *Module { return &Module{selectedRow: -1} }
 
+// sameRows reports whether two slices share identity (backing array and
+// length); rows are only ever replaced wholesale after a reload.
+func sameRows(a, b []Row) bool {
+	return len(a) == len(b) && (len(a) == 0 || &a[0] == &b[0])
+}
+
 func (m *Module) visibleRows() []Row {
+	if m.visValid && m.visFilter == m.filter && m.visSort == m.sort && sameRows(m.visRows, m.rows) {
+		return m.visCache
+	}
 	f := strings.ToLower(m.filter)
 	rows := make([]Row, 0, len(m.rows))
 	for _, r := range m.rows {
@@ -90,6 +107,8 @@ func (m *Module) visibleRows() []Row {
 		}
 		return c < 0
 	})
+	m.visValid, m.visCache = true, rows
+	m.visFilter, m.visSort, m.visRows = m.filter, m.sort, m.rows
 	return rows
 }
 

@@ -30,6 +30,15 @@ type IndicesState struct {
 	detailLoading bool
 
 	actionErr string
+
+	// visibleRows 的缓存：输入（rows/filter/hideSystem/sort）不变时复用，
+	// 避免每帧对 5k+ 行做全量过滤+排序。
+	visValid  bool
+	visCache  []IndexRow
+	visFilter string
+	visHide   bool
+	visSort   ui.SortOrder
+	visRows   []IndexRow
 }
 
 // IndexRow is one _cat/indices row.
@@ -44,7 +53,17 @@ type IndexRow struct {
 	CreationDate string `json:"creation.date.string"`
 }
 
+// sameRows reports whether two slices share identity (backing array and
+// length); rows are only ever replaced wholesale after a reload.
+func sameRows(a, b []IndexRow) bool {
+	return len(a) == len(b) && (len(a) == 0 || &a[0] == &b[0])
+}
+
 func (s *IndicesState) visibleRows() []IndexRow {
+	if s.visValid && s.visFilter == s.filter && s.visHide == s.hideSystem &&
+		s.visSort == s.sort && sameRows(s.visRows, s.rows) {
+		return s.visCache
+	}
 	var out []IndexRow
 	for _, r := range s.rows {
 		if s.hideSystem && strings.HasPrefix(r.Index, ".") {
@@ -72,6 +91,8 @@ func (s *IndicesState) visibleRows() []IndexRow {
 		}
 		return cmpRes
 	})
+	s.visValid, s.visCache = true, out
+	s.visFilter, s.visHide, s.visSort, s.visRows = s.filter, s.hideSystem, s.sort, s.rows
 	return out
 }
 
