@@ -71,9 +71,13 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	client := h.ES()
 	if client == nil {
 		t := c.Theme()
-		ui.Column(c).Fill().Padding(16).Children(func() {
-			ui.Text(c, kit.Tr(h.Lang(), "索引模板")).FontSize(20).Bold()
-			ui.Text(c, kit.Tr(h.Lang(), "未连接集群")).TextColor(t.TextMuted)
+		ui.Column(c).Fill().Children(func() {
+			ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
+				ui.Column(c).Children(func() {
+					ui.Text(c, kit.Tr(h.Lang(), "索引模板")).FontSize(kit.SizeTitle(t)).Bold()
+					ui.Text(c, kit.Tr(h.Lang(), "未连接集群")).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
+				})
+			})
 		})
 		return
 	}
@@ -81,12 +85,14 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		m.load(h)
 	}
 	t := c.Theme()
+	// ⌘R 刷新，系统习惯。
+	c.OnShortcut(ui.Cmd, ui.KeyR, func() { m.load(h) })
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "索引模板")).FontSize(19).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "{0} 个模板", len(m.visibleRows()))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "索引模板")).FontSize(kit.SizeTitle(t)).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 个模板", len(m.visibleRows()))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
 			ui.SearchField(c, &m.filter).Placeholder(kit.Tr(h.Lang(), "筛选模板…")).Width(200)
@@ -108,10 +114,10 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		})
 
 		if m.composable {
-			ui.Tabs(c, &m.tab, kit.Tr(h.Lang(), "旧版模板"), kit.Tr(h.Lang(), "新版模板")).Padding(0, 20, 0, 8)
+			ui.Tabs(c, &m.tab, kit.Tr(h.Lang(), "旧版模板"), kit.Tr(h.Lang(), "新版模板")).Padding(0, t.Space(5), 0, t.Space(2))
 		}
 		if m.actionErr != "" {
-			ui.Text(c, m.actionErr).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 20, 4, 20)
+			ui.Text(c, m.actionErr).FontSize(kit.SizeCaption(t)).TextColor(t.Danger).Padding(0, t.Space(5), t.Space(1), t.Space(5))
 		}
 		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows()) == 0, kit.Tr(h.Lang(), "还没有模板")) {
 			return
@@ -128,11 +134,11 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			case 0:
 				ui.Text(c, r.name).SingleLine()
 			case 1:
-				ui.Text(c, r.order).FontSize(12)
+				ui.Text(c, r.order)
 			case 2:
-				ui.Text(c, r.patterns).FontSize(12).SingleLine().TextColor(t.TextMuted)
+				ui.Text(c, r.patterns).SingleLine().TextColor(t.TextMuted)
 			}
-		}).Grow(1).Padding(0, 12, 0, 12)
+		}).Grow(1).Padding(0, t.Space(3), 0, t.Space(3))
 		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
 		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
 		m.prefs.Sync(h, "templates", state.Columns)
@@ -169,11 +175,11 @@ func (m *Module) visibleRows() []templateRow {
 
 func (m *Module) detailView(c *ui.Context, lang string) {
 	t := c.Theme()
-	ui.Column(c).Height(220).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
-		Background(t.Surface).Padding(12, 16, 12, 16).Gap(6).Children(func() {
-		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+	ui.Column(c).Height(t.Space(55)).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
+		Background(t.Surface).Padding(t.Space(3), t.Space(4), t.Space(3), t.Space(4)).Gap(t.Space(1.5)).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, m.detailName).Bold()
-			ui.Text(c, kit.Tr(lang, "· 定义 JSON")).TextColor(t.TextMuted).FontSize(12)
+			ui.Text(c, kit.Tr(lang, "· 定义 JSON")).TextColor(t.TextMuted).FontSize(kit.SizeCaption(t))
 			ui.Spacer(c)
 			if ui.Button(c, kit.Tr(lang, "关闭")).Clicked() {
 				m.detailName, m.detail = "", nil
@@ -185,7 +191,7 @@ func (m *Module) detailView(c *ui.Context, lang string) {
 		}
 		if len(m.detail) > 0 {
 			ui.ScrollBoth(c).Grow(1).Children(func() {
-				ui.Text(c, string(m.detail)).FontSize(12)
+				ui.Text(c, string(m.detail)).Font("monospace").FontSize(kit.SizeMono(t))
 			})
 		}
 	})
@@ -199,11 +205,11 @@ func (m *Module) deleteDialog(h kit.ModuleHost, c *ui.Context) {
 	ui.Modal(c, &m.deleting, func() {
 		ui.Text(c, kit.Tr(h.Lang(), "删除模板")).Bold()
 		ui.Text(c, kit.Tr(h.Lang(), "删了就恢复不了，确定删 {0}？", m.deleteName)).TextColor(t.TextMuted)
-		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).Justify(ui.End).Children(func() {
 			if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 				m.deleting = false
 			}
-			if ui.Button(c, kit.Tr(h.Lang(), "删除")).Clicked() {
+			if kit.DangerButton(c, kit.Tr(h.Lang(), "删除")).Clicked() {
 				name := m.deleteName
 				m.deleting = false
 				m.run(h, "删除", func(ctx context.Context, client *es.Client) error {
@@ -219,16 +225,17 @@ func (m *Module) createDialog(h kit.ModuleHost, c *ui.Context) {
 	if !m.creating {
 		return
 	}
+	t := c.Theme()
 	ui.Modal(c, &m.creating, func() {
 		ui.Text(c, kit.Tr(h.Lang(), "新建模板")).Bold()
-		ui.Column(c).Gap(8).Children(func() {
+		ui.Column(c).Gap(t.Space(2)).Children(func() {
 			ui.TextInput(c, &m.createName).Label(kit.Tr(h.Lang(), "名称"))
 			ui.TextInput(c, &m.createPats).Label(kit.Tr(h.Lang(), "索引模式（逗号分隔）"))
 			ui.TextArea(c, &m.createBody).Label(kit.Tr(h.Lang(), "JSON 内容")).Lines(3, 10)
 			if m.createErr != "" {
-				ui.Text(c, m.createErr).FontSize(12).TextColor(ui.Hex("#d64545"))
+				ui.Text(c, m.createErr).FontSize(kit.SizeCaption(t)).TextColor(t.Danger)
 			}
-			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+			ui.Row(c).Gap(t.Space(2)).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.creating = false
 				}
