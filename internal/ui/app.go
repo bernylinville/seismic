@@ -81,6 +81,11 @@ type App struct {
 	// connect is the add-connection sheet's state.
 	connect connectForm
 
+	// delConn* 是删除已存连接的确认框状态。
+	delConnOpen bool
+	delConnUUID string
+	delConnName string
+
 	deps        Deps
 	client      *es.Client
 	// loads 跟踪在途模块加载的取消句柄（loadsMu 保护；见 support.go load）。
@@ -265,25 +270,25 @@ func (a *App) page(c *ui.Context, r *ui.Route) {
 
 func (a *App) statusbar(c *ui.Context) {
 	t := c.Theme()
-	ui.Row(c).Height(26).Padding(12, 8, 0, 8).BorderWidth(0, 0, 1, 0).BorderColor(t.Border).
-		Gap(14).AlignItems(ui.Center).Children(func() {
-		Circle(c, 8, kit.HealthColor(c, a.ClusterHealth))
-		ui.Text(c, a.ClusterName).FontSize(12)
+	ui.Row(c).Height(t.Space(6.5)).Padding(t.Space(3), t.Space(2), 0, t.Space(2)).BorderWidth(0, 0, 1, 0).BorderColor(t.Border).
+		Gap(t.Space(3.5)).AlignItems(ui.Center).Children(func() {
+		Circle(c, t.Space(2), kit.HealthColor(c, a.ClusterHealth))
+		ui.Text(c, a.ClusterName).FontSize(kit.SizeCaption(t))
 		if a.DocsCount != "" {
-			ui.Text(c, kit.Tr(a.lang, "{0} 文档", a.DocsCount)).FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(a.lang, "{0} 文档", a.DocsCount)).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 		}
 		if a.ShardsText != "" {
-			ui.Text(c, a.ShardsText).FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, a.ShardsText).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 		}
 		if a.StoreText != "" {
-			ui.Text(c, a.StoreText).FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, a.StoreText).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 		}
 		ui.Spacer(c)
 		if a.ClusterVer != "" {
-			ui.Text(c, "v"+a.ClusterVer).FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, "v"+a.ClusterVer).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 		}
 		if a.UpdatedText != "" {
-			ui.Text(c, a.UpdatedText).FontSize(12).TextColor(t.TextMuted)
+			ui.Text(c, a.UpdatedText).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 		}
 	})
 }
@@ -296,9 +301,15 @@ func Circle(c *ui.Context, size float32, color ui.Color) ui.Element {
 
 func (a *App) welcome(c *ui.Context) {
 	t := c.Theme()
+	// ⌘↩ 保存并连接：表单的默认动作，系统习惯。
+	c.OnShortcut(ui.Cmd, ui.KeyEnter, func() {
+		if !a.connect.testing && a.connect.URI != "" {
+			a.saveConnection()
+		}
+	})
 	ui.Column(c).Fill().Center().Children(func() {
-		ui.Column(c).Gap(6).Center().Children(func() {
-			ui.Text(c, "Seismic").FontSize(30).Bold()
+		ui.Column(c).Gap(t.Space(1.5)).Center().Children(func() {
+			ui.Text(c, "Seismic").FontSize(kit.SizeLarge(t)).Bold()
 			ui.Text(c, kit.Tr(a.lang, "macOS 原生 Elasticsearch 客户端")).TextColor(t.TextMuted)
 		})
 		if a.connecting {
@@ -307,6 +318,8 @@ func (a *App) welcome(c *ui.Context) {
 		a.connectionsList(c)
 		a.connectFormView(c)
 	})
+
+	a.deleteConnDialog(c)
 }
 
 func (a *App) connectionsList(c *ui.Context) {
@@ -318,16 +331,25 @@ func (a *App) connectionsList(c *ui.Context) {
 	if len(list) == 0 {
 		return
 	}
-	ui.Column(c).Gap(4).Width(360).Children(func() {
-		ui.Text(c, kit.Tr(a.lang, "已保存的连接")).FontSize(12).TextColor(t.TextMuted)
+	ui.Column(c).Gap(t.Space(1)).Width(360).Children(func() {
+		ui.Text(c, kit.Tr(a.lang, "已保存的连接")).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 		for _, connItem := range list {
 			item := connItem
-			ui.Row(c).Gap(8).AlignItems(ui.Center).Padding(8, 6, 8, 6).
-				Radius(6).Background(t.Surface).Border(1, t.Border).Children(func() {
-				Circle(c, 8, t.TextMuted)
+			ui.Row(c).Gap(t.Space(2)).AlignItems(ui.Center).Padding(t.Space(2), t.Space(1.5), t.Space(2), t.Space(1.5)).
+				Radius(t.Radius).Background(t.Surface).Border(1, t.Border).ContextMenu(func(menu *ui.Menu) {
+				if menu.Item(kit.Tr(a.lang, "连接")).Chosen() {
+					a.deps.Conns.SetActive(item.UUID)
+					a.connectTo(item)
+				}
+				menu.Separator()
+				if menu.Item(kit.Tr(a.lang, "删除…")).Chosen() {
+					a.delConnUUID, a.delConnName, a.delConnOpen = item.UUID, item.Name, true
+				}
+			}).Children(func() {
+				Circle(c, t.Space(2), t.TextMuted)
 				ui.Column(c).Grow(1).Children(func() {
 					ui.Text(c, item.Name)
-					ui.Text(c, item.URI).FontSize(11).TextColor(t.TextMuted)
+					ui.Text(c, item.URI).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 				})
 				if ui.Button(c, kit.Tr(a.lang, "连接")).Clicked() {
 					a.deps.Conns.SetActive(item.UUID)
@@ -338,10 +360,36 @@ func (a *App) connectionsList(c *ui.Context) {
 	})
 }
 
+// deleteConnDialog asks before removing a saved connection.
+func (a *App) deleteConnDialog(c *ui.Context) {
+	if !a.delConnOpen || a.delConnUUID == "" {
+		return
+	}
+	t := c.Theme()
+	ui.Modal(c, &a.delConnOpen, func() {
+		ui.Column(c).Width(380).Padding(t.Space(5)).Gap(t.Space(3)).Children(func() {
+			ui.Text(c, kit.Tr(a.lang, "删除连接")).FontSize(kit.SizeTitle(t)).Bold()
+			ui.Text(c, kit.Tr(a.lang, "删了就恢复不了，确定删 {0}？", a.delConnName)).TextColor(t.TextMuted)
+			ui.Row(c).Gap(t.Space(2)).Justify(ui.End).Children(func() {
+				if ui.Button(c, kit.Tr(a.lang, "取消")).Clicked() {
+					a.delConnOpen = false
+				}
+				if kit.DangerButton(c, kit.Tr(a.lang, "删除")).Clicked() {
+					uuid := a.delConnUUID
+					a.delConnOpen = false
+					if a.deps.Conns != nil {
+						_ = a.deps.Conns.Delete(uuid)
+					}
+				}
+			})
+		})
+	})
+}
+
 func (a *App) connectFormView(c *ui.Context) {
 	t := c.Theme()
 	f := &a.connect
-	ui.Column(c).Gap(8).Width(360).Padding(16).Radius(10).
+	ui.Column(c).Gap(t.Space(2)).Width(360).Padding(t.Space(4)).Radius(t.Space(3)).
 		Background(t.Surface).Border(1, t.Border).Children(func() {
 		ui.Text(c, kit.Tr(a.lang, "添加连接")).Bold()
 		ui.TextInput(c, &f.Name).Placeholder(kit.Tr(a.lang, "名称（可选）")).Label(kit.Tr(a.lang, "名称"))
@@ -367,7 +415,7 @@ func (a *App) connectFormView(c *ui.Context) {
 			ui.TextInput(c, &f.Region).Placeholder("us-east-1").Label("Region")
 		}
 		ui.Checkbox(c, &f.TLSInsecure, kit.Tr(a.lang, "跳过证书校验"))
-		ui.Row(c).Gap(8).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).Children(func() {
 			if ui.Button(c, kit.Tr(a.lang, "测试连接")).Disabled(f.testing || f.URI == "").Clicked() {
 				a.testConnection()
 			}
@@ -389,7 +437,7 @@ func (a *App) connectFormView(c *ui.Context) {
 					msg += "\n" + kit.Tr(a.lang, "证书是自己签的？勾「跳过证书校验」")
 				}
 			}
-			ui.Text(c, msg).FontSize(12).TextColor(color)
+			ui.Text(c, msg).FontSize(kit.SizeCaption(t)).TextColor(color)
 		}
 	})
 }

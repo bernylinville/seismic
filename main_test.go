@@ -114,6 +114,68 @@ func TestConnectionFlow(t *testing.T) {
 	}
 }
 
+// TestWelcomeShortcutAndDeleteConnection covers the welcome page's ⌘↩
+// default action and the saved-connection context-menu delete.
+func TestWelcomeShortcutAndDeleteConnection(t *testing.T) {
+	es := newES(t)
+	dir := t.TempDir()
+
+	secrets, err := conn.NewFileSecretStore(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conns, err := conn.NewStore(dir, secrets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	database, err := db.Open(context.Background(), filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { database.Close() })
+
+	a := appui.NewApp(ui.NewRouter("/overview"))
+	a.AttachDeps(appui.Deps{Conns: conns, DB: database, HomeDir: dir})
+	tt := ui.NewTester(a.View, 1280, 800)
+
+	// ⌘↩ 在欢迎页就是「保存并连接」。
+	a.SetConnectForm("快捷集群", es.URL, "none")
+	tt.Key(ui.Cmd, ui.KeyEnter)
+	deadline := time.Now().Add(3 * time.Second)
+	for !a.Connected && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if !a.Connected {
+		t.Fatalf("cmd-enter did not connect; testMsg=%q", a.ConnectTestMessage())
+	}
+
+	// 回到欢迎页，右键删除已存连接。
+	a.Connected = false
+	tt.Frame()
+	if !tt.HasText("已保存的连接") {
+		t.Fatalf("saved list missing, texts %q", tt.Texts())
+	}
+	if err := tt.RightClick("快捷集群"); err != nil {
+		t.Fatal(err)
+	}
+	if err := tt.ChooseMenuItem("删除…"); err != nil {
+		t.Fatal(err)
+	}
+	if !tt.HasText("删了就恢复不了，确定删 快捷集群？") {
+		t.Fatalf("confirm dialog missing, texts %q", tt.Texts())
+	}
+	if err := tt.Click("删除"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if list := conns.List(); len(list) != 0 {
+		t.Errorf("connection still saved after delete: %v", list)
+	}
+	if tt.HasText("已保存的连接") {
+		t.Errorf("saved list should be gone once empty, texts %q", tt.Texts())
+	}
+}
+
 func TestShellEnglishUI(t *testing.T) {
 	es := newES(t)
 	dir := t.TempDir()

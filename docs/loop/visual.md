@@ -16,7 +16,7 @@
 
 | 模块 | 材质 | 配色 | 控件 | 间距 | 交互 |
 |---|---|---|---|---|---|
-| 壳层（app/main/kit） | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| 壳层（app/main/kit） | ✅ | ✅ | ✅ | ✅ | ✅ |
 | overview | ✅ | ✅ | ✅ | ✅ | ✅ |
 | indices | ✅ | ✅ | ✅ | ✅ | ✅ |
 | search | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -50,6 +50,7 @@
 | 13 | users 全五维：页头/表格/三个对话框全换 Space 与字阶（对话框标题 16→17 统一）；操作消息错误色→`t.Danger`；表格 7 处 FontSize(12) 拆除；删除按钮硬编码 `Background(#d64545)+白字`→`kit.DangerButton`（悬念清单项兑现）；⌘R | 259 tests green, vet 干净 |
 | 14 | roles 全五维：与 users 同构同套路——页头/表格/详情/两对话框全换 Space 与字阶；详情 JSON→mono+`kit.SizeMono`；操作消息错误色→`t.Danger`；删除按钮硬编码→`kit.DangerButton`（最后一个兑现）；⌘R | 259 tests green, vet 干净 |
 | 15 | editor 调色板校准（悬念清单最后一项）：语法高亮 key 色旧 teal `#0e8c7f`→`t.Accent`（跟随系统 accent 与深浅模式，全链路无 teal 残留）；str 已是 `t.Success`、num/lit 保留明暗双档手调值（主题无数值/字面量语义位）；状态栏 7 处 `FontSize(12)`→`kit.SizeCaption`、`Padding(6,10)/Gap(12)`→Space 单位 | 259 tests green, vet 干净 |
+| 16 | 壳层 控件/间距/交互（清单收官）：statusbar `Height(26)/Padding(12,8,0,8)/Gap(14)`→Space、6 处 `FontSize(12)`→SizeCaption、健康点 8px→Space(2)；welcome 标题 30→SizeLarge(26)、Gap/字号全走主题；connectionsList/connectForm 的 Padding/Gap/Radius→Space/t.Radius/t.Space(3)；交互：⌘↩=保存并连接（欢迎页默认动作）、已存连接行右键菜单（连接/删除…）+删除确认模态（`kit.DangerButton`，`conn.Store.Delete`）；新增 Tester 回归测试覆盖 ⌘↩ 与右键删除全流程 | 260 tests green, vet 干净 |
 
 ## 截图变化点
 
@@ -68,6 +69,19 @@
 - 轮 13（全部 11 张刷新；08-users 表格正文走默认 13，其余对话框变化需交互触发）
 - 轮 14（全部 11 张刷新；roles 页不在截图清单——同 users 套路）
 - 轮 15（全部 11 张刷新，变化集中在 03-search 的编辑器）：JSON 键名高亮 teal→系统蓝 accent（与侧边栏选中色同源）；编辑器下方状态栏字号 12→11 caption、间距随主题（「JSON 有效」仍为主题绿）
+- 轮 16（全部 11 张刷新，变化在连接后的壳层）：底部状态栏字号 12→11 caption、高度/内距/间距换主题单位（视觉密度略收）；欢迎页不在截图清单（标题 30→26、连接卡片圆角/间距随主题，需实机目检）
+
+## 变更总览（loop 收官）
+
+16 轮全部完成，13 模块 × 5 维度 + 壳层清单全 ✅，`go test ./...` 260 绿，浅色+深色 11 张截图每轮刷新。
+
+- **材质**：`main.go` 开启 `WindowOptions.Vibrancy(VibrancySidebar)`，透明根页面让侧边栏/工具栏/状态栏坐上系统毛玻璃，标题栏随之融合（round 1）
+- **配色**：teal accent 全链路清零——app.go 覆盖（r1）与 editor 语法高亮 key 色（r15）都改跟随系统 accent/深浅模式；健康色去重为 `kit.HealthColor`→主题 `Success/Warning/Danger`（r1）；全部模块错误红/状态色硬编码换主题语义（r3–r9）；破坏性按钮统一 `kit.DangerButton`（r10 起五个模块+连接删除 r16）
+- **控件/字体**：kit 字号阶梯 `SizeCaption/SizeBody/SizeTitle/SizeLarge/SizeMono`（Rem 推导，跟随系统字体设置）替换全应用约 90 处硬编码 `FontSize`；表格单元行走主题默认 13；`panel()/card()` 卡片材质 helper 统一分组观感（r2 起）
+- **间距**：pixel padding/gap 全部换 `t.Space(n)`（含壳层状态栏/欢迎页/连接表单，r16）；密度向系统 App 收紧
+- **交互**：⌘R 全部 13 页刷新；⌘↩ 搜索/rest 发送/欢迎页连接；⌘T rest 新建标签；右键菜单：索引行、用户行、角色行、rest 历史、已存连接（r3–r5、r13–r14、r16）
+- **交付节奏**：每 3 个模块产出 darwin/universal 实机包（r4/r8/r14 补 r10/r12/r14 节点+最终包见下）；实机批量反馈不阻塞
+- **已知残留**（有意保留）：editor 画布绘制常量（gutterFont/fontSize 等自绘 metric，非主题覆盖）；固定宽度（侧边栏 220、表单 360、搜索框 200）为布局决定；07-snapshots 截图里 mock server 对 `_snapshot` 返回数组导致的 decode 错误为既有测试数据形态
 
 ## 悬念（后续轮处理）
 
@@ -75,4 +89,4 @@
 - ~~全模块散落 `#d64545/#2f9e63/#d9a406` 错误/健康色硬编码~~（各模块轮已清零）
 - ~~users/roles 删除按钮 `Background(#d64545)` 自绘破坏性按钮~~（轮 10/13/14 已换 `kit.DangerButton`）
 
-悬念清单已全部清零；剩壳层 控件/间距/交互 三个格子（下轮）。
+悬念清单已全部清零；壳层 控件/间距/交互 在轮 16 收官，清单全 ✅。
