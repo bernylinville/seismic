@@ -50,7 +50,7 @@ func TestShellNavigates(t *testing.T) {
 	if !tt.HasText("prod-es-8") {
 		t.Errorf("cluster name missing from toolbar, texts %q", tt.Texts())
 	}
-	for _, label := range []string{"概览", "索引", "REST 控制台", "用户", "角色", "快照仓库"} {
+	for _, label := range []string{"概览", "索引", "控制台", "用户", "角色", "快照仓库"} {
 		if err := tt.Click(label); err != nil {
 			t.Fatalf("click %s: %v", label, err)
 		}
@@ -151,7 +151,7 @@ func TestShellEnglishUI(t *testing.T) {
 	}
 	time.Sleep(50 * time.Millisecond)
 	tt.Frame()
-	for _, want := range []string{"Overview", "Indices", "REST Console", "Cluster", "0 indices", "Hide system indices"} {
+	for _, want := range []string{"Overview", "Indices", "Console", "Cluster", "0 indices", "Hide system indices"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing %q, texts %q", want, tt.Texts())
 		}

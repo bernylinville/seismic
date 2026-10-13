@@ -132,7 +132,7 @@ func TestRepositoriesCreate(t *testing.T) {
 	if err := tt.Click("新建仓库…"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.HasText("新建快照仓库") {
+	if !tt.HasText("新建仓库") {
 		t.Fatalf("create dialog missing: %q", tt.Texts())
 	}
 	if err := tt.Click("仓库名称"); err != nil {

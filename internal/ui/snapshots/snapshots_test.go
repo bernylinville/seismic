@@ -118,7 +118,7 @@ func TestSnapshotsListAndDetail(t *testing.T) {
 	if !tt.HasText("索引 2 个") {
 		t.Fatalf("detail counts missing: %q", tt.Texts())
 	}
-	if !tt.HasText("分片 成功 4 / 失败 0 / 总数 4") {
+	if !tt.HasText("分片：成功 4 · 失败 0 · 共 4") {
 		t.Fatalf("detail shards missing: %q", tt.Texts())
 	}
 }
@@ -128,7 +128,7 @@ func TestSnapshotsEnglishUI(t *testing.T) {
 	host.lang = "en"
 	m := New()
 	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1000, 700)
-	for _, text := range []string{"Snapshots", "1 snapshots", "SLM policies", "Shards OK", "Restore…"} {
+	for _, text := range []string{"Snapshots", "1 snapshots", "Automatic snapshots", "Shards OK", "Restore…"} {
 		if !tt.HasText(text) {
 			t.Fatalf("missing %q in %q", text, tt.Texts())
 		}
@@ -146,7 +146,7 @@ func TestSnapshotsRestore(t *testing.T) {
 	if !tt.HasText("恢复快照 snap1") {
 		t.Fatalf("restore dialog missing: %q", tt.Texts())
 	}
-	if err := tt.Click("重命名模式"); err != nil {
+	if err := tt.Click("改名规则"); err != nil {
 		t.Fatal(err)
 	}
 	tt.Type("index_(.+)")
@@ -211,7 +211,7 @@ func TestSlmSectionShownOnSupportedVersion(t *testing.T) {
 	m := New()
 	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1000, 700)
 
-	for _, text := range []string{"SLM 策略", "daily-snapshots", "RUNNING", "0 30 1 * * ?"} {
+	for _, text := range []string{"自动快照", "daily-snapshots", "RUNNING", "0 30 1 * * ?"} {
 		if !tt.HasText(text) {
 			t.Fatalf("missing %q in %q", text, tt.Texts())
 		}
@@ -231,7 +231,7 @@ func TestSlmSectionShownOnSupportedVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	tt.Type("weekly")
-	if err := tt.Click("调度 schedule"); err != nil {
+	if err := tt.Click("定时"); err != nil {
 		t.Fatal(err)
 	}
 	tt.Type("0 0 2 * * ?")
@@ -259,7 +259,7 @@ func TestSlmSectionHiddenBelow74(t *testing.T) {
 	m := New()
 	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1000, 700)
 
-	if tt.HasText("SLM 策略") || tt.HasText("daily-snapshots") {
+	if tt.HasText("自动快照") || tt.HasText("daily-snapshots") {
 		t.Fatalf("SLM section visible on 6.8.0: %q", tt.Texts())
 	}
 	for _, call := range f.calls {

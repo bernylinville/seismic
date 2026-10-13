@@ -232,7 +232,7 @@ func TestRestEnglishUI(t *testing.T) {
 	if err := tt.Click("Send"); err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"REST Console", "History", "Saved queries", "New tab", "ms"} {
+	for _, want := range []string{"Console", "History", "Saved queries", "New tab", "ms"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing %q in %q", want, tt.Texts())
 		}

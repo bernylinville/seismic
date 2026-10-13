@@ -470,7 +470,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 
 		// 结果区。
 		if !m.ranOnce {
-			ui.Text(c, kit.Tr(h.Lang(), "输入索引 pattern 与查询后点「搜索」")).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "填好索引和查询，点「搜索」")).TextColor(t.TextMuted)
 			return
 		}
 		if m.loading {
@@ -498,7 +498,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		})
 
 		if len(m.rows) == 0 {
-			ui.Text(c, kit.Tr(h.Lang(), "没有命中文档")).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "没搜到任何文档")).TextColor(t.TextMuted)
 			return
 		}
 		if m.selectedRow >= len(m.rows) {

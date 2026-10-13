@@ -47,7 +47,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			}
 			ui.Text(c, m.actionMsg).FontSize(12).TextColor(color).Padding(0, 20, 4, 20)
 		}
-		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "没有角色")) {
+		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "还没有角色")) {
 			return
 		}
 
@@ -65,7 +65,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		cols = append(cols,
 			ui.TableColumn{Title: kit.Tr(h.Lang(), "索引权限")},
 			ui.TableColumn{Title: kit.Tr(h.Lang(), "集群权限")},
-			ui.TableColumn{Title: kit.Tr(h.Lang(), "保留"), Width: 56},
+			ui.TableColumn{Title: kit.Tr(h.Lang(), "系统保留"), Width: 56},
 		)
 		kinds = append(kinds, colIndices, colCluster, colReserved)
 
@@ -220,7 +220,7 @@ func (m *Module) roleDialog(h kit.ModuleHost, c *ui.Context, edit bool) {
 			}).Description(indicesHint(version, h.Lang())).Error(indicesErr)
 			ui.Field(c, "run_as", func() {
 				ui.TextInput(c, &f.RunAs)
-			}).Description(kit.Tr(h.Lang(), "逗号分隔的代替用户"))
+			}).Description(kit.Tr(h.Lang(), "代替的用户，逗号分隔"))
 
 			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
@@ -257,7 +257,7 @@ func (m *Module) confirmDialog(h kit.ModuleHost, c *ui.Context) {
 	ui.Modal(c, &m.confirmOpen, func() {
 		ui.Column(c).Width(380).Padding(20).Gap(12).Children(func() {
 			ui.Text(c, kit.Tr(h.Lang(), "删除角色")).FontSize(16).Bold()
-			ui.Text(c, kit.Tr(h.Lang(), "删除角色 {0}？此操作不可撤销。", m.confirmName)).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "删了就恢复不了，确定删 {0}？", m.confirmName)).TextColor(t.TextMuted)
 			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.confirmOpen = false

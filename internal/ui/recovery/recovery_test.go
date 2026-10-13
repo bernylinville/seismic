@@ -140,7 +140,7 @@ func TestRecoveryEmpty(t *testing.T) {
 	m := New()
 	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 900, 600)
 
-	if !tt.HasText("没有恢复记录") {
+	if !tt.HasText("还没有恢复记录") {
 		t.Errorf("empty state missing; texts %q", tt.Texts())
 	}
 	if strings.Contains(strings.Join(tt.Texts(), " "), "undefined") {

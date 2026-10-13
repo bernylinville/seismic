@@ -1,6 +1,6 @@
 // Package editor 是自建的 JSON 代码编辑器（ADR 0003）：词法高亮、
 // 行号、括号匹配、自动缩进、格式化、校验定位与结构/mapping 补全。
-// 搜索 Query DSL 与 REST 控制台共用。
+// 搜索 Query DSL 与 控制台共用。
 package editor
 
 import "strings"

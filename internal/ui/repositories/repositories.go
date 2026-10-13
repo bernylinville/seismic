@@ -104,7 +104,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			ui.Text(c, kit.Tr(h.Lang(), "未连接集群")).TextColor(t.TextMuted).Padding(0, 16)
 			return
 		}
-		if kit.StateText(c, h.Lang(), m.loading && !m.loadedOnce, m.err, len(m.visibleRows()) == 0, kit.Tr(h.Lang(), "没有仓库")) {
+		if kit.StateText(c, h.Lang(), m.loading && !m.loadedOnce, m.err, len(m.visibleRows()) == 0, kit.Tr(h.Lang(), "还没有仓库")) {
 			m.dialogs(h, c)
 			return
 		}
@@ -147,7 +147,7 @@ func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
 	t := c.Theme()
 
 	ui.Modal(c, &m.showNew, func() {
-		ui.Text(c, kit.Tr(h.Lang(), "新建快照仓库")).Bold()
+		ui.Text(c, kit.Tr(h.Lang(), "新建仓库")).Bold()
 		ui.Form(c, func() {
 			ui.Field(c, kit.Tr(h.Lang(), "仓库名称"), func() {
 				input := ui.TextInput(c, &m.newName)
@@ -182,7 +182,7 @@ func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
 		name := m.deleteName
 		ui.Modal(c, &m.deleteConfirm, func() {
 			ui.Text(c, kit.Tr(h.Lang(), "删除仓库")).Bold()
-			ui.Text(c, kit.Tr(h.Lang(), "确定删除仓库 {0}？其快照将不可用。", name)).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "删除后快照会失效，确定删 {0}？", name)).TextColor(t.TextMuted)
 			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.deleteName, m.deleteConfirm = "", false
@@ -244,7 +244,7 @@ func (m *Module) create(h kit.ModuleHost) {
 	}
 	var settings map[string]any
 	if err := json.Unmarshal([]byte(m.newJSON), &settings); err != nil {
-		m.newErr = kit.Tr(h.Lang(), "settings JSON 无效: {0}", err.Error())
+		m.newErr = kit.Tr(h.Lang(), "设置 JSON 无效：{0}", err.Error())
 		return
 	}
 	client := h.ES()

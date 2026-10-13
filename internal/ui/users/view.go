@@ -48,7 +48,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			}
 			ui.Text(c, m.actionMsg).FontSize(12).TextColor(color).Padding(0, 20, 4, 20)
 		}
-		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "没有用户")) {
+		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "还没有用户")) {
 			return
 		}
 
@@ -68,10 +68,10 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			cols = append(cols, ui.TableColumn{Title: kit.Tr(h.Lang(), "启用"), Width: 56})
 			kinds = append(kinds, colEnabled)
 		}
-		cols = append(cols, ui.TableColumn{Title: kit.Tr(h.Lang(), "保留"), Width: 56})
+		cols = append(cols, ui.TableColumn{Title: kit.Tr(h.Lang(), "系统保留"), Width: 56})
 		kinds = append(kinds, colReserved)
 		if showDeprecated {
-			cols = append(cols, ui.TableColumn{Title: kit.Tr(h.Lang(), "弃用"), Width: 56})
+			cols = append(cols, ui.TableColumn{Title: kit.Tr(h.Lang(), "已弃用"), Width: 56})
 			kinds = append(kinds, colDeprecated)
 		}
 
@@ -217,7 +217,7 @@ func (m *Module) userDialog(h kit.ModuleHost, c *ui.Context, edit bool) {
 					passErr = kit.Tr(h.Lang(), "密码不能为空")
 				}
 				if len(splitList(f.Roles)) == 0 {
-					rolesErr = kit.Tr(h.Lang(), "至少一个角色")
+					rolesErr = kit.Tr(h.Lang(), "至少选一个角色")
 				}
 			}
 			valid := strings.TrimSpace(f.Username) != "" && (edit || f.Password != "") && len(splitList(f.Roles)) > 0
@@ -313,7 +313,7 @@ func (m *Module) confirmDialog(h kit.ModuleHost, c *ui.Context) {
 	ui.Modal(c, &m.confirmOpen, func() {
 		ui.Column(c).Width(380).Padding(20).Gap(12).Children(func() {
 			ui.Text(c, kit.Tr(h.Lang(), "删除用户")).FontSize(16).Bold()
-			ui.Text(c, kit.Tr(h.Lang(), "删除用户 {0}？此操作不可撤销。", m.confirmName)).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "删了就恢复不了，确定删 {0}？", m.confirmName)).TextColor(t.TextMuted)
 			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 					m.confirmOpen = false

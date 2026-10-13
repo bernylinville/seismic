@@ -184,7 +184,7 @@ func (m *Module) healthCard(c *ui.Context, lang string) {
 			kit.Dot(c, 16, kit.HealthColor(c, status))
 			ui.Text(c, kit.Tr(lang, orDefault(status, "未知"))).FontSize(26).Bold().TextColor(kit.HealthColor(c, status))
 		})
-		ui.Text(c, kit.Tr(lang, "活动分片 {0}", fmtInt(m.health.ActiveShards))).FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(lang, "正常分片 {0}", fmtInt(m.health.ActiveShards))).FontSize(12).TextColor(t.TextMuted)
 		ui.Text(c, kit.Tr(lang, "未分配分片 {0}", fmtInt(m.health.UnassignedShards))).FontSize(12).TextColor(t.TextMuted)
 	})
 }
@@ -214,7 +214,7 @@ func (m *Module) dataCard(c *ui.Context, lang string) {
 			ui.Text(c, fmtInt(m.stats.Indices.Docs.Count)).FontSize(26).Bold()
 			ui.Text(c, kit.Tr(lang, "文档")).FontSize(12).TextColor(t.TextMuted)
 		})
-		ui.Text(c, kit.Tr(lang, "{0} 磁盘占用", humanBytes(m.stats.Indices.Store.SizeInBytes))).FontSize(12).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(lang, "磁盘占用 {0}", humanBytes(m.stats.Indices.Store.SizeInBytes))).FontSize(12).TextColor(t.TextMuted)
 		ui.Text(c, kit.Tr(lang, "{0} 个索引", fmtInt(m.stats.Indices.Count))).FontSize(12).TextColor(t.TextMuted)
 	})
 }

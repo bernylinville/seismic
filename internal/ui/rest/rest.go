@@ -1,4 +1,4 @@
-// Package rest builds the「REST 控制台」module page.
+// Package rest builds the「控制台」module page.
 package rest
 
 import (
@@ -41,7 +41,7 @@ type tab struct {
 	resp    string
 }
 
-// Module holds the REST 控制台 module's state.
+// Module holds the 控制台 module's state.
 type Module struct {
 	tabs   []tab
 	active int
@@ -76,7 +76,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 
 	ui.Column(c).Fill().Padding(16).Gap(12).Children(func() {
 		ui.Row(c).Children(func() {
-			ui.Text(c, kit.Tr(h.Lang(), "REST 控制台")).FontSize(20).Bold()
+			ui.Text(c, kit.Tr(h.Lang(), "控制台")).FontSize(20).Bold()
 		})
 
 		ui.Row(c).Gap(8).Children(func() {
@@ -150,7 +150,7 @@ func (m *Module) requestView(h kit.ModuleHost, c *ui.Context) {
 		})
 
 		if tb.method == "GET" || tb.method == "HEAD" {
-			ui.Text(c, kit.Tr(h.Lang(), "{0} 请求不发送 body；查询参数直接写在路径里，如 _cat/indices?v=true", tb.method)).
+			ui.Text(c, kit.Tr(h.Lang(), "{0} 请求不带正文；参数写在路径里，如 _cat/indices?v=true", tb.method)).
 				TextColor(t.TextMuted).FontSize(12)
 		} else {
 			ui.Column(c).Height(150).Border(1, t.Border).Radius(6).Children(func() {
@@ -176,7 +176,7 @@ func (m *Module) responseView(c *ui.Context, t *ui.Theme, lang string) {
 
 	ui.Column(c).Grow(1).Border(1, t.Border).Radius(8).Padding(12).Gap(8).Children(func() {
 		if !tb.sent {
-			ui.Text(c, kit.Tr(lang, "尚未发送请求")).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(lang, "还没发过请求")).TextColor(t.TextMuted)
 			return
 		}
 		ui.Row(c).Gap(12).Children(func() {
@@ -226,7 +226,7 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 				if m.histLoading {
 					ui.Text(c, kit.Tr(h.Lang(), "加载中…")).TextColor(t.TextMuted)
 				} else {
-					ui.Text(c, kit.Tr(h.Lang(), "暂无历史")).TextColor(t.TextMuted)
+					ui.Text(c, kit.Tr(h.Lang(), "发过的请求会出现在这里")).TextColor(t.TextMuted)
 				}
 				return
 			}
@@ -247,7 +247,7 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 		ui.Column(c).Border(1, t.Border).Radius(8).Padding(12).Gap(8).Children(func() {
 			ui.Text(c, kit.Tr(h.Lang(), "保存的查询")).Bold()
 			if len(m.saved) == 0 {
-				ui.Text(c, kit.Tr(h.Lang(), "暂无保存的查询")).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "保存常用请求，一键再发")).TextColor(t.TextMuted)
 				return
 			}
 			ui.List(c, nil, len(m.saved), func(i int) {

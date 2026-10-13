@@ -180,7 +180,7 @@ func (m *Module) reroute(h kit.ModuleHost, shard Row, targetNode string) {
 			_, err := client.ClusterReroute(context.Background(), []any{cmd})
 			return func() {
 				if err != nil {
-					m.actionErr = kit.Tr(h.Lang(), "重新分配失败: {0}", kit.ErrMessage(err))
+					m.actionErr = kit.Tr(h.Lang(), "重新分配失败：{0}", kit.ErrMessage(err))
 					return
 				}
 				m.rerouting = nil
@@ -199,7 +199,7 @@ func cols(lang string) []ui.TableColumn {
 		{Title: kit.Tr(lang, "文档数"), Width: 100, Align: ui.End, Sortable: true},
 		{Title: kit.Tr(lang, "大小"), Width: 90, Align: ui.End, Sortable: true},
 		{Title: kit.Tr(lang, "节点"), Sortable: true},
-		{Title: kit.Tr(lang, "未分配原因"), Width: 150},
+		{Title: kit.Tr(lang, "原因"), Width: 150},
 	}
 }
 
@@ -231,7 +231,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			m.rerouteBar(h, c)
 		}
 
-		if kit.StateText(c, h.Lang(), m.loading && len(m.rows) == 0, m.err, len(m.visibleRows()) == 0, kit.Tr(h.Lang(), "没有分片")) {
+		if kit.StateText(c, h.Lang(), m.loading && len(m.rows) == 0, m.err, len(m.visibleRows()) == 0, kit.Tr(h.Lang(), "还没有分片")) {
 			return
 		}
 
@@ -250,7 +250,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 							m.rerouting = &r
 						}
 					} else {
-						if menu.Item(kit.Tr(h.Lang(), "分配到节点…")).Chosen() {
+						if menu.Item(kit.Tr(h.Lang(), "移到节点…")).Chosen() {
 							m.rerouting = &r
 						}
 					}
@@ -288,7 +288,7 @@ func (m *Module) rerouteBar(h kit.ModuleHost, c *ui.Context) {
 		if shard.Node != "" {
 			ui.Text(c, kit.Tr(h.Lang(), "重新分配 {0}[{1}]（当前 {2}）到：", shard.Index, shard.Shard.String(), shard.Node)).FontSize(12)
 		} else {
-			ui.Text(c, kit.Tr(h.Lang(), "分配 {0}[{1}] 到：", shard.Index, shard.Shard.String())).FontSize(12)
+			ui.Text(c, kit.Tr(h.Lang(), "移动 {0}[{1}] 到：", shard.Index, shard.Shard.String())).FontSize(12)
 		}
 		for _, node := range m.nodes() {
 			if node == shard.Node {

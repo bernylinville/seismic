@@ -104,7 +104,7 @@ func (f *fakeES) find(t *testing.T, method, path string) request {
 func TestUsersListCurrentVersion(t *testing.T) {
 	_, fake, tt := newHarness(t, "8.14.1", "elasticsearch")
 
-	for _, want := range []string{"alice", "elastic", "bot", "kibana_admin, monitoring_user", "alice@example.com", "启用", "弃用", "3 个用户"} {
+	for _, want := range []string{"alice", "elastic", "bot", "kibana_admin, monitoring_user", "alice@example.com", "启用", "已弃用", "3 个用户"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing text %q; texts: %q", want, tt.Texts())
 		}
@@ -115,7 +115,7 @@ func TestUsersListCurrentVersion(t *testing.T) {
 func TestUsersListOldVersion(t *testing.T) {
 	_, fake, tt := newHarness(t, "6.5.0", "elasticsearch")
 
-	if tt.HasText("弃用") {
+	if tt.HasText("已弃用") {
 		t.Errorf("deprecated column should be hidden before 7.6; texts: %q", tt.Texts())
 	}
 	if !tt.HasText("启用") {
@@ -284,7 +284,7 @@ func TestDeleteUser(t *testing.T) {
 	if err := tt.ChooseMenuItem("删除…"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.HasText("删除用户 alice？") {
+	if !tt.HasText("删了就恢复不了，确定删 alice？") {
 		t.Fatalf("confirm dialog did not open; texts: %q", tt.Texts())
 	}
 	if err := tt.Click("删除"); err != nil {

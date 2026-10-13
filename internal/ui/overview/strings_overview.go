@@ -9,13 +9,13 @@ func init() {
 		"未知集群":             "Unknown cluster",
 		"健康":               "Health",
 		"未知":               "Unknown",
-		"活动分片 {0}":         "Active shards {0}",
+		"正常分片 {0}":         "Healthy shards {0}",
 		"未分配分片 {0}":        "Unassigned shards {0}",
 		"状态":               "Status",
 		"{0} 主分片 · {1} 副本": "{0} primary · {1} replica shards",
 		"数据":               "Data",
 		"文档":               "docs",
-		"{0} 磁盘占用":         "{0} on disk",
+		"磁盘占用 {0}":         "{0} on disk",
 		"{0} 个索引":          "{0} indices",
 	})
 }

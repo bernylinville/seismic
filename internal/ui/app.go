@@ -39,7 +39,7 @@ var modules = []module{
 	{"/recovery", "分片恢复", "cluster"},
 	{"/indices", "索引", "data"},
 	{"/search", "搜索", "data"},
-	{"/rest", "REST 控制台", "data"},
+	{"/rest", "控制台", "data"},
 	{"/templates", "索引模板", "data"},
 	{"/snapshots", "快照", "ops"},
 	{"/repositories", "快照仓库", "ops"},
@@ -209,7 +209,7 @@ func (a *App) toolbar(c *ui.Context) {
 			if m.Item(kit.Tr(a.lang, "管理连接…")).Chosen() {
 				a.Connected = false
 			}
-			if m.Item(kit.Tr(a.lang, "刷新健康状态")).Chosen() {
+			if m.Item(kit.Tr(a.lang, "刷新健康")).Chosen() {
 				a.refreshHealth()
 			}
 		})
@@ -260,7 +260,7 @@ func (a *App) page(c *ui.Context, r *ui.Route) {
 			return
 		}
 	}
-	ui.Text(c, kit.Tr(a.lang, "页面不存在"))
+	ui.Text(c, kit.Tr(a.lang, "找不到这个页面"))
 }
 
 func (a *App) statusbar(c *ui.Context) {
@@ -379,7 +379,7 @@ func (a *App) connectFormView(c *ui.Context) {
 			ui.TextInput(c, &f.SessionToken).Placeholder(kit.Tr(a.lang, "可选")).Label("Session Token")
 			ui.TextInput(c, &f.Region).Placeholder("us-east-1").Label("Region")
 		}
-		ui.Checkbox(c, &f.TLSInsecure, kit.Tr(a.lang, "跳过 TLS 证书校验（自签名）"))
+		ui.Checkbox(c, &f.TLSInsecure, kit.Tr(a.lang, "跳过证书校验"))
 		ui.Row(c).Gap(8).Children(func() {
 			if ui.Button(c, kit.Tr(a.lang, "测试连接")).Disabled(f.testing || f.URI == "").Clicked() {
 				a.testConnection()
@@ -399,7 +399,7 @@ func (a *App) connectFormView(c *ui.Context) {
 			} else {
 				color = ui.Hex("#d64545")
 				if strings.Contains(strings.ToLower(msg), "x509") || strings.Contains(strings.ToLower(msg), "certificate") {
-					msg += "\n" + kit.Tr(a.lang, "自签名集群请勾选「跳过 TLS 证书校验」")
+					msg += "\n" + kit.Tr(a.lang, "证书是自己签的？勾「跳过证书校验」")
 				}
 			}
 			ui.Text(c, msg).FontSize(12).TextColor(color)

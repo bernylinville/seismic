@@ -86,7 +86,7 @@ func TestSettingsEnglishUI(t *testing.T) {
 	host := &fakeHost{client: client, lang: "en"}
 	m := New()
 	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1000, 640)
-	for _, want := range []string{"Cluster settings", "3 settings", "Section", "Key", "Value"} {
+	for _, want := range []string{"Cluster settings", "3 settings", "Group", "Key", "Value"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing %q, texts %q", want, tt.Texts())
 		}
@@ -96,7 +96,7 @@ func TestSettingsEnglishUI(t *testing.T) {
 func TestSettingsList(t *testing.T) {
 	_, tt, _ := newModule(t)
 	for _, want := range []string{
-		"persistent", "transient",
+		"永久", "临时",
 		"cluster.max_shards_per_node", "1000",
 		"action.auto_create_index", "true",
 		"cluster.routing.allocation.enable", "all",
@@ -115,13 +115,13 @@ func TestSettingsEditRequiresConfirm(t *testing.T) {
 	if err := tt.Click("编辑…"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.HasText("当前值: 1000") {
+	if !tt.HasText("当前值：1000") {
 		t.Errorf("edit dialog missing current value, texts %q", tt.Texts())
 	}
 	if err := tt.Click("应用…"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.HasText("确定继续吗") {
+	if !tt.HasText("确定改吗") {
 		t.Errorf("confirm step missing, texts %q", tt.Texts())
 	}
 	if len((*puts)["last"]) != 0 {

@@ -72,7 +72,7 @@ func (m *Module) visibleRows() []Row {
 				return strings.Compare(a.Source, b.Source)
 			case "节点":
 				return strings.Compare(a.Node, b.Node)
-			case "开始时间":
+			case "开始":
 				return strings.Compare(a.StartTime, b.StartTime)
 			default: // 索引
 				return strings.Compare(a.Index, b.Index)
@@ -127,7 +127,7 @@ func cols(lang string) []ui.TableColumn {
 		{Title: kit.Tr(lang, "阶段"), Width: 140, Sortable: true},
 		{Title: kit.Tr(lang, "来源"), Width: 150, Sortable: true},
 		{Title: kit.Tr(lang, "节点"), Sortable: true},
-		{Title: kit.Tr(lang, "开始时间"), Sortable: true},
+		{Title: kit.Tr(lang, "开始"), Sortable: true},
 	}
 }
 
@@ -151,7 +151,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			}
 		})
 
-		if kit.StateText(c, h.Lang(), m.loading && len(m.rows) == 0, m.err, len(m.visibleRows()) == 0, kit.Tr(h.Lang(), "没有恢复记录")) {
+		if kit.StateText(c, h.Lang(), m.loading && len(m.rows) == 0, m.err, len(m.visibleRows()) == 0, kit.Tr(h.Lang(), "还没有恢复记录")) {
 			return
 		}
 

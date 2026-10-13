@@ -46,7 +46,7 @@ type settingRow struct {
 
 func settingsCols(lang string) []ui.TableColumn {
 	return []ui.TableColumn{
-		{Title: kit.Tr(lang, "区块"), Width: 110},
+		{Title: kit.Tr(lang, "分组"), Width: 110},
 		{Title: kit.Tr(lang, "键"), Sortable: true},
 		{Title: kit.Tr(lang, "值")},
 	}
@@ -93,7 +93,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		if m.actionErr != "" {
 			ui.Text(c, m.actionErr).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 20, 4, 20)
 		}
-		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "没有集群设置")) {
+		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "还没有集群设置")) {
 			return
 		}
 
@@ -105,7 +105,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			r := m.rows[row]
 			switch col {
 			case 0:
-				ui.Text(c, map[bool]string{true: "transient", false: "persistent"}[r.section == "transient"]).
+				ui.Text(c, sectionLabel(h.Lang(), r.section == "transient")).
 					FontSize(12).TextColor(sectionColor(c, r.section))
 			case 1:
 				ui.Text(c, r.key).SingleLine()
@@ -144,10 +144,10 @@ func (m *Module) editDialog(h kit.ModuleHost, c *ui.Context) {
 			ui.Column(c).Gap(8).Children(func() {
 				ui.Row(c).Gap(8).Children(func() {
 					ui.Text(c, m.editKey).Bold()
-					ui.Text(c, kit.Tr(h.Lang(), "当前值: {0}", m.editOld)).FontSize(12).TextColor(t.TextMuted)
+					ui.Text(c, kit.Tr(h.Lang(), "当前值：{0}", m.editOld)).FontSize(12).TextColor(t.TextMuted)
 				})
 				ui.TextArea(c, &m.editValue).Label(kit.Tr(h.Lang(), "新值（JSON 或纯文本）")).Lines(2, 8)
-				ui.Checkbox(c, &m.transient, kit.Tr(h.Lang(), "写入 transient（重启后失效）"))
+				ui.Checkbox(c, &m.transient, kit.Tr(h.Lang(), "重启后失效"))
 				ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
 					if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 						m.editing = false
@@ -161,8 +161,8 @@ func (m *Module) editDialog(h kit.ModuleHost, c *ui.Context) {
 		}
 		// 二次确认：改集群设置是危险操作。
 		ui.Column(c).Gap(8).Children(func() {
-			ui.Text(c, kit.Tr(h.Lang(), "将把 {0} 设置 {1} 改为 {2}", sectionName(m.transient), m.editKey, m.editValue)).TextColor(t.TextMuted)
-			ui.Text(c, kit.Tr(h.Lang(), "集群设置变更会影响整个集群，确定继续吗？")).
+			ui.Text(c, kit.Tr(h.Lang(), "会把 {0} 的 {1} 改成 {2}", sectionLabel(h.Lang(), m.transient), m.editKey, m.editValue)).TextColor(t.TextMuted)
+			ui.Text(c, kit.Tr(h.Lang(), "会影响整个集群，确定改吗？")).
 				FontSize(12).TextColor(ui.Hex("#d64545"))
 			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "返回")).Clicked() {
@@ -178,11 +178,11 @@ func (m *Module) editDialog(h kit.ModuleHost, c *ui.Context) {
 	})
 }
 
-func sectionName(transient bool) string {
+func sectionLabel(lang string, transient bool) string {
 	if transient {
-		return "transient"
+		return kit.Tr(lang, "临时")
 	}
-	return "persistent"
+	return kit.Tr(lang, "永久")
 }
 
 // apply PUTs the single edited key, then reloads.
@@ -207,7 +207,7 @@ func (m *Module) apply(h kit.ModuleHost, key, value string, transient bool) {
 			_, err := client.ClusterPutSettings(context.Background(), body)
 			return func() {
 				if err != nil {
-					m.actionErr = kit.Tr(h.Lang(), "修改失败: {0}", kit.ErrMessage(err))
+					m.actionErr = kit.Tr(h.Lang(), "修改失败：{0}", kit.ErrMessage(err))
 				}
 				m.load(h)
 			}

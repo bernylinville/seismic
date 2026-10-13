@@ -102,15 +102,15 @@ func (m *Module) visibleRows() []NodeRow {
 	slices.SortStableFunc(out, func(a, b NodeRow) int {
 		res := cmp.Compare(a.Name.String(), b.Name.String())
 		switch m.sort.Column {
-		case "堆内存%":
+		case "堆内存":
 			res = numeric(a.HeapPercent, b.HeapPercent)
-		case "内存%":
+		case "内存":
 			res = numeric(a.RamPercent, b.RamPercent)
 		case "CPU":
 			res = numeric(a.CPU, b.CPU)
-		case "负载 1m":
+		case "负载":
 			res = numeric(a.Load1m, b.Load1m)
-		case "磁盘%":
+		case "磁盘":
 			res = numeric(a.DiskPercent, b.DiskPercent)
 		case "版本":
 			res = strings.Compare(a.Version.String(), b.Version.String())
@@ -260,11 +260,11 @@ func nodesCols(lang string) []ui.TableColumn {
 		{Title: kit.Tr(lang, "名称"), Sortable: true},
 		{Title: "IP", Width: 130},
 		{Title: kit.Tr(lang, "角色"), Width: 70},
-		{Title: kit.Tr(lang, "堆内存%"), Width: 80, Align: ui.End, Sortable: true},
-		{Title: kit.Tr(lang, "内存%"), Width: 70, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "堆内存"), Width: 80, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "内存"), Width: 70, Align: ui.End, Sortable: true},
 		{Title: "CPU", Width: 60, Align: ui.End, Sortable: true},
-		{Title: kit.Tr(lang, "负载 1m"), Width: 80, Align: ui.End, Sortable: true},
-		{Title: kit.Tr(lang, "磁盘%"), Width: 70, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "负载"), Width: 80, Align: ui.End, Sortable: true},
+		{Title: kit.Tr(lang, "磁盘"), Width: 70, Align: ui.End, Sortable: true},
 		{Title: kit.Tr(lang, "角色详情"), Width: 170},
 		{Title: kit.Tr(lang, "版本"), Width: 80},
 	}
@@ -291,7 +291,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			}
 		})
 
-		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "没有节点")) {
+		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "还没有节点")) {
 			return
 		}
 

@@ -108,12 +108,12 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		})
 
 		if m.composable {
-			ui.Tabs(c, &m.tab, kit.Tr(h.Lang(), "旧版模板"), kit.Tr(h.Lang(), "组合模板")).Padding(0, 20, 0, 8)
+			ui.Tabs(c, &m.tab, kit.Tr(h.Lang(), "旧版模板"), kit.Tr(h.Lang(), "新版模板")).Padding(0, 20, 0, 8)
 		}
 		if m.actionErr != "" {
 			ui.Text(c, m.actionErr).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 20, 4, 20)
 		}
-		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows()) == 0, kit.Tr(h.Lang(), "没有模板")) {
+		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows()) == 0, kit.Tr(h.Lang(), "还没有模板")) {
 			return
 		}
 
@@ -198,7 +198,7 @@ func (m *Module) deleteDialog(h kit.ModuleHost, c *ui.Context) {
 	t := c.Theme()
 	ui.Modal(c, &m.deleting, func() {
 		ui.Text(c, kit.Tr(h.Lang(), "删除模板")).Bold()
-		ui.Text(c, kit.Tr(h.Lang(), "确定删除模板 {0} 吗？此操作不可撤销。", m.deleteName)).TextColor(t.TextMuted)
+		ui.Text(c, kit.Tr(h.Lang(), "删了就恢复不了，确定删 {0}？", m.deleteName)).TextColor(t.TextMuted)
 		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
 			if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 				m.deleting = false
@@ -224,7 +224,7 @@ func (m *Module) createDialog(h kit.ModuleHost, c *ui.Context) {
 		ui.Column(c).Gap(8).Children(func() {
 			ui.TextInput(c, &m.createName).Label(kit.Tr(h.Lang(), "名称"))
 			ui.TextInput(c, &m.createPats).Label(kit.Tr(h.Lang(), "索引模式（逗号分隔）"))
-			ui.TextArea(c, &m.createBody).Label(kit.Tr(h.Lang(), "JSON 主体")).Lines(3, 10)
+			ui.TextArea(c, &m.createBody).Label(kit.Tr(h.Lang(), "JSON 内容")).Lines(3, 10)
 			if m.createErr != "" {
 				ui.Text(c, m.createErr).FontSize(12).TextColor(ui.Hex("#d64545"))
 			}
@@ -251,12 +251,12 @@ func (m *Module) endpoint(h kit.ModuleHost) string {
 // create validates the dialog's fields and PUTs the new template.
 func (m *Module) create(h kit.ModuleHost) {
 	if strings.TrimSpace(m.createName) == "" || strings.TrimSpace(m.createPats) == "" {
-		m.createErr = kit.Tr(h.Lang(), "名称和索引模式不能为空")
+		m.createErr = kit.Tr(h.Lang(), "名称和索引模式都要填")
 		return
 	}
 	var body map[string]any
 	if err := json.Unmarshal([]byte(m.createBody), &body); err != nil {
-		m.createErr = kit.Tr(h.Lang(), "JSON 主体无效: {0}", err.Error())
+		m.createErr = kit.Tr(h.Lang(), "JSON 内容无效：{0}", err.Error())
 		return
 	}
 	patterns := []string{}
@@ -326,7 +326,7 @@ func (m *Module) run(h kit.ModuleHost, name string, fn func(ctx context.Context,
 			err := fn(context.Background(), client)
 			return func() {
 				if err != nil {
-					m.actionErr = kit.Tr(h.Lang(), "{0}失败: {1}", kit.Tr(h.Lang(), name), kit.ErrMessage(err))
+					m.actionErr = kit.Tr(h.Lang(), "{0}失败：{1}", kit.Tr(h.Lang(), name), kit.ErrMessage(err))
 				}
 				m.load(h)
 			}

@@ -108,7 +108,7 @@ func TestTemplatesList(t *testing.T) {
 			t.Errorf("legacy list missing %q, texts %q", want, tt.Texts())
 		}
 	}
-	if err := tt.Click("组合模板"); err != nil {
+	if err := tt.Click("新版模板"); err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{"logs-new", "metrics-new", "200"} {
@@ -153,7 +153,7 @@ func TestTemplatesDetailAndDelete(t *testing.T) {
 	if err := tt.Click("删除…"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.HasText("此操作不可撤销") {
+	if !tt.HasText("确定删 logs？") {
 		t.Errorf("confirm dialog missing, texts %q", tt.Texts())
 	}
 	if err := tt.Click("删除"); err != nil {

@@ -129,7 +129,7 @@ func (f *fakeES) find(t *testing.T, method, path string) request {
 func TestRolesListCurrentVersion(t *testing.T) {
 	_, fake, tt := newHarness(t, "8.14.1", "elasticsearch")
 
-	for _, want := range []string{"reader", "superuser", "writer", "logs-*: read", "metrics-*: write", "保留", "3 个角色"} {
+	for _, want := range []string{"reader", "superuser", "writer", "logs-*: read", "metrics-*: write", "系统保留", "3 个角色"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing text %q; texts: %q", want, tt.Texts())
 		}
@@ -371,7 +371,7 @@ func TestDeleteRole(t *testing.T) {
 	if err := tt.ChooseMenuItem("删除…"); err != nil {
 		t.Fatal(err)
 	}
-	if !tt.HasText("删除角色 writer？") {
+	if !tt.HasText("删了就恢复不了，确定删 writer？") {
 		t.Fatalf("confirm dialog did not open; texts: %q", tt.Texts())
 	}
 	if err := tt.Click("删除"); err != nil {

@@ -359,13 +359,13 @@ func (m *Module) putRole(h kit.ModuleHost, name, okKey, failKey string) {
 // createRole PUTs a new role.
 func (m *Module) createRole(h kit.ModuleHost) {
 	name := strings.TrimSpace(m.form.Name)
-	m.putRole(h, name, "已创建角色 {0}", "创建角色 {0}失败: {1}")
+	m.putRole(h, name, "已创建角色 {0}", "创建角色 {0}失败：{1}")
 }
 
 // updateRole PUTs an edited role.
 func (m *Module) updateRole(h kit.ModuleHost) {
 	name := strings.TrimSpace(m.form.Name)
-	m.putRole(h, name, "已更新角色 {0}", "更新角色 {0}失败: {1}")
+	m.putRole(h, name, "已更新角色 {0}", "更新角色 {0}失败：{1}")
 }
 
 // deleteRole DELETEs a role off-thread, then reloads the list.
@@ -378,7 +378,7 @@ func (m *Module) deleteRole(h kit.ModuleHost) {
 	h.Load(func() { m.busy = true; m.confirmOpen = false }, func() func() {
 		_, err := client.SecurityRoleDelete(context.Background(), name)
 		return func() {
-			m.report(h, "已删除角色 {0}", "删除角色 {0}失败: {1}", name, err)
+			m.report(h, "已删除角色 {0}", "删除角色 {0}失败：{1}", name, err)
 			if err == nil {
 				m.confirmName = ""
 				m.load(h)

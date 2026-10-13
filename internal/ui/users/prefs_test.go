@@ -34,7 +34,7 @@ func TestUsersColumnPrefsPersisted(t *testing.T) {
 		t.Fatalf("fresh module should start with zero layout, got %+v", frame)
 	}
 	// What ui.Table would leave in ListState.Columns after a drag.
-	frame.Order = []string{"用户名", "角色", "全名", "邮箱", "启用", "保留"}
+	frame.Order = []string{"用户名", "角色", "全名", "邮箱", "启用", "系统保留"}
 	frame.Widths = map[string]float32{"用户名": 220, "角色": 160}
 	if !m1.prefs.Sync(host, "users", frame) {
 		t.Fatal("changed layout should save")
@@ -51,7 +51,7 @@ func TestUsersColumnPrefsPersisted(t *testing.T) {
 
 	m2 := New()
 	got := m2.prefs.Frame(host, "users")
-	if len(got.Order) != 6 || got.Order[0] != "用户名" || got.Order[5] != "保留" {
+	if len(got.Order) != 6 || got.Order[0] != "用户名" || got.Order[5] != "系统保留" {
 		t.Errorf("column order not restored: %+v", got.Order)
 	}
 	if got.Widths["用户名"] != 220 || got.Widths["角色"] != 160 || len(got.Widths) != 2 {

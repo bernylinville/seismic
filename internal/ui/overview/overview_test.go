@@ -65,8 +65,8 @@ func TestOverviewRendersCluster(t *testing.T) {
 
 	for _, want := range []string{
 		"测试集群", "uuid-123", "8.14.1", "elasticsearch",
-		"yellow", "活动分片 12", "未分配分片 3", "1 master · 2 data",
-		"1234567", "5.0 GB 磁盘占用", "7 个索引",
+		"yellow", "正常分片 12", "未分配分片 3", "1 master · 2 data",
+		"1234567", "磁盘占用 5.0 GB", "7 个索引",
 	} {
 		if !tt.HasText(want) {
 			t.Errorf("missing %q, texts %q", want, tt.Texts())
@@ -94,7 +94,7 @@ func TestOverviewEnglishUI(t *testing.T) {
 	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 1280, 800)
 	for _, want := range []string{
 		"Overview", "Cluster at a glance", "5.0 GB on disk", "7 indices",
-		"Active shards 12", "Unassigned shards 3",
+		"Healthy shards 12", "Unassigned shards 3",
 	} {
 		if !tt.HasText(want) {
 			t.Errorf("missing %q, texts %q", want, tt.Texts())

@@ -126,7 +126,7 @@ func TestRenderSmokeScreens(t *testing.T) {
 	for _, nav := range []struct {
 		label, name string
 	}{
-		{"索引", "02-indices"}, {"搜索", "03-search"}, {"REST 控制台", "04-rest"},
+		{"索引", "02-indices"}, {"搜索", "03-search"}, {"控制台", "04-rest"},
 		{"节点", "05-nodes"}, {"分片", "06-shards"}, {"快照", "07-snapshots"},
 		{"用户", "08-users"}, {"设置", "09-settings"},
 	} {

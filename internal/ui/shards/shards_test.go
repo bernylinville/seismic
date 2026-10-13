@@ -98,7 +98,7 @@ func TestShardsEnglishUI(t *testing.T) {
 	host := &fakeHost{client: client, lang: "en"}
 	m := New()
 	tt := ui.NewTester(func(c *ui.Context) { m.View(host, c) }, 900, 600)
-	for _, want := range []string{"Shards", "3 shards", "Unassigned reason"} {
+	for _, want := range []string{"Shards", "3 shards", "Reason"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing text %q; texts %q", want, tt.Texts())
 		}
@@ -122,7 +122,7 @@ func TestShardsRerouteUnassigned(t *testing.T) {
 	if err := tt.RightClick("logs-old"); err != nil {
 		t.Fatal(err)
 	}
-	if err := tt.ChooseMenuItem("分配到节点…"); err != nil {
+	if err := tt.ChooseMenuItem("移到节点…"); err != nil {
 		t.Fatal(err)
 	}
 	// 未分配副本走 allocate_replica 命令。

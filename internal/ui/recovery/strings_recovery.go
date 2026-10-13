@@ -7,8 +7,8 @@ func init() {
 		"类型":        "Type",
 		"阶段":        "Stage",
 		"来源":        "Source",
-		"开始时间":      "Started",
+		"开始":        "Started",
 		"{0} 条恢复记录": "{0} recoveries",
-		"没有恢复记录":    "No recoveries",
+		"还没有恢复记录":   "No recoveries yet",
 	})
 }

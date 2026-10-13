@@ -101,7 +101,7 @@ type Module struct {
 	newIgnoreUnavailable bool
 	newFocus             bool
 
-	// SLM 策略区。
+	// 自动快照（SLM）策略区。
 	slmPolicies []slmEntry
 	slmIDs      []string
 	slmLoading  bool
@@ -110,7 +110,7 @@ type Module struct {
 	slmMode     string
 	slmSel      int
 
-	// 新建 SLM 策略对话框。
+	// 新建自动快照策略对话框。
 	slmNewOpen     bool
 	slmNewName     string
 	slmNewSchedule string
@@ -215,7 +215,7 @@ func (m *Module) snapshotsTable(h kit.ModuleHost, c *ui.Context) {
 		return
 	}
 	if m.repo == "" {
-		ui.Text(c, kit.Tr(h.Lang(), "没有仓库，请先在「快照仓库」模块创建")).TextColor(t.TextMuted).Padding(0, 16)
+		ui.Text(c, kit.Tr(h.Lang(), "先去「快照仓库」加一个仓库")).TextColor(t.TextMuted).Padding(0, 16)
 		return
 	}
 	if m.err != nil {
@@ -223,7 +223,7 @@ func (m *Module) snapshotsTable(h kit.ModuleHost, c *ui.Context) {
 		return
 	}
 	rows := m.visibleSnaps()
-	if kit.StateText(c, h.Lang(), false, nil, len(rows) == 0, kit.Tr(h.Lang(), "没有快照")) {
+	if kit.StateText(c, h.Lang(), false, nil, len(rows) == 0, kit.Tr(h.Lang(), "还没有快照")) {
 		return
 	}
 
@@ -298,7 +298,7 @@ func (m *Module) detailView(c *ui.Context, lang string) {
 		}
 		ui.Row(c).Gap(16).Children(func() {
 			ui.Text(c, kit.Tr(lang, "索引 {0} 个", len(m.detail.Indices))).FontSize(12)
-			ui.Text(c, kit.Tr(lang, "分片 成功 {0} / 失败 {1} / 总数 {2}",
+			ui.Text(c, kit.Tr(lang, "分片：成功 {0} · 失败 {1} · 共 {2}",
 				m.detail.Shards.Successful, m.detail.Shards.Failed, m.detail.Shards.Total)).FontSize(12)
 			ui.Text(c, m.detail.State).FontSize(12).TextColor(stateColor(m.detail.State))
 		})
@@ -312,9 +312,9 @@ func (m *Module) slmSection(h kit.ModuleHost, c *ui.Context) {
 	t := c.Theme()
 	ui.Column(c).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).Padding(12, 12, 12, 12).Gap(8).Children(func() {
 		ui.Row(c).Gap(10).AlignItems(ui.Center).Children(func() {
-			ui.Text(c, kit.Tr(h.Lang(), "SLM 策略")).Bold()
+			ui.Text(c, kit.Tr(h.Lang(), "自动快照")).Bold()
 			if m.slmMode != "" {
-				ui.Text(c, kit.Tr(h.Lang(), "状态: {0}", m.slmMode)).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "状态：{0}", m.slmMode)).FontSize(12).TextColor(t.TextMuted)
 			}
 			ui.Spacer(c)
 			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {
@@ -333,7 +333,7 @@ func (m *Module) slmSection(h kit.ModuleHost, c *ui.Context) {
 			ui.Text(c, kit.ErrMessage(m.slmErr)).FontSize(12).TextColor(ui.Hex("#d64545"))
 			return
 		}
-		if kit.StateText(c, h.Lang(), m.slmLoading && !m.slmLoaded, nil, len(m.slmPolicies) == 0, kit.Tr(h.Lang(), "没有策略")) {
+		if kit.StateText(c, h.Lang(), m.slmLoading && !m.slmLoaded, nil, len(m.slmPolicies) == 0, kit.Tr(h.Lang(), "还没有策略")) {
 			return
 		}
 		if m.slmSel >= len(m.slmPolicies) {
@@ -380,7 +380,7 @@ func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
 					m.restoreFocus = false
 				}
 			}).Description(kit.Tr(h.Lang(), "逗号分隔，留空恢复全部"))
-			ui.Field(c, kit.Tr(h.Lang(), "重命名模式"), func() { ui.TextInput(c, &m.restorePattern) })
+			ui.Field(c, kit.Tr(h.Lang(), "改名规则"), func() { ui.TextInput(c, &m.restorePattern) })
 			ui.Field(c, kit.Tr(h.Lang(), "替换为"), func() { ui.TextInput(c, &m.restoreReplacement) })
 			ui.Field(c, kit.Tr(h.Lang(), "选项"), func() {
 				ui.Checkbox(c, &m.restoreIgnoreUnavailable, kit.Tr(h.Lang(), "忽略不可用索引"))
@@ -422,7 +422,7 @@ func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
 	})
 
 	ui.Modal(c, &m.slmNewOpen, func() {
-		ui.Text(c, kit.Tr(h.Lang(), "新建 SLM 策略")).Bold()
+		ui.Text(c, kit.Tr(h.Lang(), "新建自动快照")).Bold()
 		ui.Form(c, func() {
 			ui.Field(c, kit.Tr(h.Lang(), "策略名称"), func() {
 				input := ui.TextInput(c, &m.slmNewName)
@@ -431,7 +431,7 @@ func (m *Module) dialogs(h kit.ModuleHost, c *ui.Context) {
 					m.slmNewFocus = false
 				}
 			})
-			ui.Field(c, kit.Tr(h.Lang(), "调度 schedule"), func() { ui.TextInput(c, &m.slmNewSchedule) }).Description(kit.Tr(h.Lang(), "cron 表达式，如 0 30 1 * * ?"))
+			ui.Field(c, kit.Tr(h.Lang(), "定时"), func() { ui.TextInput(c, &m.slmNewSchedule) }).Description(kit.Tr(h.Lang(), "cron 表达式，如 0 30 1 * * ?"))
 			ui.Field(c, kit.Tr(h.Lang(), "索引"), func() { ui.TextInput(c, &m.slmNewIndices) }).Description(kit.Tr(h.Lang(), "逗号分隔，* 为全部"))
 		})
 		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
@@ -690,7 +690,7 @@ func (m *Module) createSlm(h kit.ModuleHost) {
 		return
 	}
 	if m.slmNewName == "" || m.slmNewSchedule == "" || m.slmNewRepo == "" {
-		m.actionErr = kit.Tr(h.Lang(), "策略名称、schedule 和仓库不能为空")
+		m.actionErr = kit.Tr(h.Lang(), "策略名、定时和仓库都要填")
 		return
 	}
 	indices := parseList(m.slmNewIndices)

@@ -48,7 +48,7 @@ func (a *App) indicesPage(c *ui.Context) {
 		if s.actionErr != "" {
 			ui.Text(c, s.actionErr).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 20, 4, 20)
 		}
-		if stateText(c, a.lang, s.loading, s.err, len(s.rows) == 0, kit.Tr(a.lang, "没有索引")) {
+		if stateText(c, a.lang, s.loading, s.err, len(s.rows) == 0, kit.Tr(a.lang, "还没有索引")) {
 			return
 		}
 

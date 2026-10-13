@@ -13,7 +13,7 @@
 ## 数据对象
 
 - **Index（索引）**：ES 文档存储单元。健康取集群分片视角（green/yellow/red）。
-- **Index Template（索引模板）**：新建索引的模板（legacy 与 composable 两种）。
+- **Index Template（索引模板）**：新建索引的模板（legacy 与 composable 两种；UI 分别称「旧版模板」「新版模板」）。
 - **Shard（分片）**：索引的分片，主分片（primary）与副本（replica）；分片有未分配（unassigned）状态。
 - **Shard Recovery（分片恢复）**：分片数据恢复事件（store/replica/snapshot 等）。
 - **Node（节点）**：集群成员，有角色、堆内存、磁盘水位。
@@ -24,16 +24,16 @@
 ## 操作
 
 - **Search（搜索）**：对索引发 Query DSL 查询并浏览结果。
-- **REST Console（REST 控制台）**：任意方法+路径+body 的原始请求工具；有 Tab、历史、保存的查询，按集群独立。
+- **REST Console（控制台）**：任意方法+路径+body 的原始请求工具；有 Tab、历史、保存的查询，按集群独立。UI 名「控制台」，不再带 REST 前缀。
 - **Query History（查询历史）**：REST 控制台发出的请求记录，自动记录，按集群分区存 SQLite。
 - **Saved Query（保存的查询）**：用户显式命名的 REST 请求。
 
 ## 版本与兼容
 
 - **Version Branch（版本分支）**：按集群 major/minor 版本切换 API 形状的行为（如 `_security` vs `_xpack/security`）。
-- **SLM**：Snapshot Lifecycle Management，ES ≥ 7.4 才有。
+- **SLM**：Snapshot Lifecycle Management，定时自动做快照；UI 称「自动快照」。ES ≥ 7.4 才有。
 
 ## UI
 
-- **Module（模块）**：侧栏导航的功能单元，共 13 个：概览、索引、索引模板、设置、分片、分片恢复、节点、搜索、REST 控制台、快照仓库、快照、用户、角色。
+- **Module（模块）**：侧栏导航的功能单元，共 13 个：概览、索引、索引模板、设置、分片、分片恢复、节点、搜索、控制台、快照仓库、快照、用户、角色。
 - **Health Dot（健康点）**：绿/黄/红三色圆点，全 app 唯一的健康语义色。
