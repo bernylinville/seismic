@@ -27,7 +27,7 @@
 | snapshots | ✅ | ✅ | ✅ | ✅ | ✅ |
 | repositories | ✅ | ✅ | ✅ | ✅ | ✅ |
 | templates | ✅ | ✅ | ✅ | ✅ | ✅ |
-| settings | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| settings | ✅ | ✅ | ✅ | ✅ | ✅ |
 | users | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | roles | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 
@@ -46,6 +46,7 @@
 | 9 | snapshots 全五维：`stateColor`/`failColor` 硬编码→主题语义（加 *ui.Theme 参数）；页头/表格/详情/SLM 区/三个对话框按钮行全换 Space 与字阶；表格+SLM 表共 9 处 FontSize(12) 拆除；6 处错误文案→`t.Danger`；⌘R 刷新（repos+snaps+slm 同按钮逻辑） | 259 tests green, vet 干净 |
 | 10 | repositories 全五维：页头/表格/对话框全换 Space 与字阶；2 处错误红→`t.Danger`；表格 2 处 FontSize(12) 拆除；⌘R；新增 `kit.DangerButton`（主题 Danger 填充的破坏性确认按钮，mygo v0.4.8 无内建变体）并用于删除仓库模态（原为蓝色 PrimaryButton） | 259 tests green, vet 干净 |
 | 11 | templates 全五维：未连接态页头对齐全局模式（原裸 20px）；页头/Tabs/表格/详情/两对话框全换 Space 与字阶；3 处错误红→`t.Danger`；详情 JSON→mono+`kit.SizeMono`；删除确认按钮→`kit.DangerButton`（原为普通灰按钮）；⌘R | 259 tests green, vet 干净 |
+| 12 | settings 全五维：未连接态页头对齐全局模式；页头/表格/编辑对话框全换 Space 与字阶；`sectionColor` 硬编码→主题语义（transient Warning/持久 Success）；错误/警告→`t.Danger`；「确认修改」（集群级危险操作）→`kit.DangerButton`；⌘R | 259 tests green, vet 干净 |
 
 ## 截图变化点
 
@@ -60,6 +61,7 @@
 - 轮 9（全部 11 张刷新，变化集中在 07-snapshots）：错误文案主题红；表格/SLM 正文走默认 13；详情与 SLM 区间距随主题（截图里 mock server 对 _snapshot 返回数组导致的 decode 错误为既有测试数据形态，非本轮回归）
 - 轮 10（全部 11 张刷新；repositories 页不在截图清单——同 snapshots 套路，删除确认按钮变系统式红色破坏性按钮）
 - 轮 11（全部 11 张刷新；templates 页不在截图清单——同套路，详情 JSON 变 mono、删除确认变红色破坏性按钮）
+- 轮 12（全部 11 张刷新；09-settings 无数据行可显——页头与空态走新字阶，transient/持久分区色待实机数据验证）
 
 ## 悬念（后续轮处理）
 

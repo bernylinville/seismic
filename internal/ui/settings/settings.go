@@ -57,9 +57,13 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	client := h.ES()
 	if client == nil {
 		t := c.Theme()
-		ui.Column(c).Fill().Padding(16).Children(func() {
-			ui.Text(c, kit.Tr(h.Lang(), "集群设置")).FontSize(20).Bold()
-			ui.Text(c, kit.Tr(h.Lang(), "未连接集群")).TextColor(t.TextMuted)
+		ui.Column(c).Fill().Children(func() {
+			ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
+				ui.Column(c).Children(func() {
+					ui.Text(c, kit.Tr(h.Lang(), "集群设置")).FontSize(kit.SizeTitle(t)).Bold()
+					ui.Text(c, kit.Tr(h.Lang(), "未连接集群")).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
+				})
+			})
 		})
 		return
 	}
@@ -67,12 +71,14 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		m.load(h)
 	}
 	t := c.Theme()
+	// ⌘R 刷新，系统习惯。
+	c.OnShortcut(ui.Cmd, ui.KeyR, func() { m.load(h) })
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "集群设置")).FontSize(19).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "{0} 项设置", len(m.rows))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "集群设置")).FontSize(kit.SizeTitle(t)).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 项设置", len(m.rows))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
 			if ui.Button(c, kit.Tr(h.Lang(), "刷新")).Clicked() {
@@ -91,7 +97,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		})
 
 		if m.actionErr != "" {
-			ui.Text(c, m.actionErr).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 20, 4, 20)
+			ui.Text(c, m.actionErr).FontSize(kit.SizeCaption(t)).TextColor(t.Danger).Padding(0, t.Space(5), t.Space(1), t.Space(5))
 		}
 		if kit.StateText(c, h.Lang(), m.loading, m.err, len(m.rows) == 0, kit.Tr(h.Lang(), "还没有集群设置")) {
 			return
@@ -106,13 +112,13 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			switch col {
 			case 0:
 				ui.Text(c, sectionLabel(h.Lang(), r.section == "transient")).
-					FontSize(12).TextColor(sectionColor(c, r.section))
+					TextColor(sectionColor(c, r.section))
 			case 1:
 				ui.Text(c, r.key).SingleLine()
 			case 2:
-				ui.Text(c, r.value).FontSize(12).SingleLine().TextColor(t.TextMuted)
+				ui.Text(c, r.value).SingleLine().TextColor(t.TextMuted)
 			}
-		}).Grow(1).Padding(0, 12, 0, 12)
+		}).Grow(1).Padding(0, t.Space(3), 0, t.Space(3))
 		if table.Submitted() && m.selectedRow >= 0 && m.selectedRow < len(m.rows) {
 			r := m.rows[m.selectedRow]
 			m.editing, m.confirming = true, false
@@ -127,10 +133,11 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 }
 
 func sectionColor(c *ui.Context, section string) ui.Color {
+	t := c.Theme()
 	if section == "transient" {
-		return ui.Hex("#d9a406")
+		return t.Warning
 	}
-	return ui.Hex("#2f9e63")
+	return t.Success
 }
 
 func (m *Module) editDialog(h kit.ModuleHost, c *ui.Context) {
@@ -141,14 +148,14 @@ func (m *Module) editDialog(h kit.ModuleHost, c *ui.Context) {
 	ui.Modal(c, &m.editing, func() {
 		ui.Text(c, kit.Tr(h.Lang(), "修改集群设置")).Bold()
 		if !m.confirming {
-			ui.Column(c).Gap(8).Children(func() {
-				ui.Row(c).Gap(8).Children(func() {
+			ui.Column(c).Gap(t.Space(2)).Children(func() {
+				ui.Row(c).Gap(t.Space(2)).Children(func() {
 					ui.Text(c, m.editKey).Bold()
-					ui.Text(c, kit.Tr(h.Lang(), "当前值：{0}", m.editOld)).FontSize(12).TextColor(t.TextMuted)
+					ui.Text(c, kit.Tr(h.Lang(), "当前值：{0}", m.editOld)).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 				})
 				ui.TextArea(c, &m.editValue).Label(kit.Tr(h.Lang(), "新值（JSON 或纯文本）")).Lines(2, 8)
 				ui.Checkbox(c, &m.transient, kit.Tr(h.Lang(), "重启后失效"))
-				ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+				ui.Row(c).Gap(t.Space(2)).Justify(ui.End).Children(func() {
 					if ui.Button(c, kit.Tr(h.Lang(), "取消")).Clicked() {
 						m.editing = false
 					}
@@ -160,15 +167,15 @@ func (m *Module) editDialog(h kit.ModuleHost, c *ui.Context) {
 			return
 		}
 		// 二次确认：改集群设置是危险操作。
-		ui.Column(c).Gap(8).Children(func() {
+		ui.Column(c).Gap(t.Space(2)).Children(func() {
 			ui.Text(c, kit.Tr(h.Lang(), "会把 {0} 的 {1} 改成 {2}", sectionLabel(h.Lang(), m.transient), m.editKey, m.editValue)).TextColor(t.TextMuted)
 			ui.Text(c, kit.Tr(h.Lang(), "会影响整个集群，确定改吗？")).
-				FontSize(12).TextColor(ui.Hex("#d64545"))
-			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+				FontSize(kit.SizeCaption(t)).TextColor(t.Danger)
+			ui.Row(c).Gap(t.Space(2)).Justify(ui.End).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "返回")).Clicked() {
 					m.confirming = false
 				}
-				if ui.Button(c, kit.Tr(h.Lang(), "确认修改")).Clicked() {
+				if kit.DangerButton(c, kit.Tr(h.Lang(), "确认修改")).Clicked() {
 					key, value, transient := m.editKey, m.editValue, m.transient
 					m.editing = false
 					m.apply(h, key, value, transient)
