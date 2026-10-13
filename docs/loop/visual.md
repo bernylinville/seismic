@@ -17,7 +17,7 @@
 | 模块 | 材质 | 配色 | 控件 | 间距 | 交互 |
 |---|---|---|---|---|---|
 | 壳层（app/main/kit） | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
-| overview | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| overview | ✅ | ✅ | ✅ | ✅ | ✅ |
 | indices | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | search | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | rest | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -36,10 +36,12 @@
 | 轮 | 内容 | 结果 |
 |---|---|---|
 | 1 | 壳层材质+配色：main.go 开启 `VibrancySidebar`（app.go 既有条件分支首次生效，welcome 页也坐材质上）；删 teal accent 覆盖（app.go 156-159），完全跟随系统 accent；健康色去重——app.go `healthColor`/deps.go `healthDotColor`（死代码）删除，`kit.HealthColor` 单源改映射主题语义色 `Success/Warning/Danger`（自动跟随深浅模式），connect 表单测试结果色与 kit.StateText 错误色同步换语义色 | 259 tests green, vet 干净 |
+| 2 | overview 全五维：kit 新增字号阶梯 `SizeCaption/SizeBody/SizeTitle/SizeLarge`（Rem 相对推导，跟随系统字体设置，对齐 macOS 11/13/17/26）；四张卡抽 `card()` helper——Surface 填充 + Space(3) 圆角 + 1px 边（系统设置分组卡片观感）；全部 pixel padding/gap 换 `t.Space(n)`；标题 19→17、正文 12→13、caption 12→11 对齐系统字阶；⌘R 刷新快捷键（页内作用域） | 259 tests green, vet 干净 |
 
 ## 截图变化点
 
 - 轮 1（全部 11 张刷新）：侧边栏选中项 teal→系统蓝 accent；健康点/健康大字 teal 绿→主题 Success 绿（深色模式下自动换深色变体）；浅色截图侧边栏/标题栏/状态栏呈材质底（Tester 以中性色占位，真实毛玻璃需实机）；深色 10-indices-dark 全页深色化正确
+- 轮 2（全部 11 张刷新，变化集中在 01-overview）：四卡由透明+边框变 Surface 填充圆角分组卡片；页标题 19→17、卡内正文字号对齐系统阶梯（caption 11 / body 13 / large 26）；卡间距/内距换主题 Space 单位，密度略收紧
 
 ## 悬念（后续轮处理）
 
