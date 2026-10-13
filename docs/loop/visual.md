@@ -23,7 +23,7 @@
 | rest | ✅ | ✅ | ✅ | ✅ | ✅ |
 | nodes | ✅ | ✅ | ✅ | ✅ | ✅ |
 | shards | ✅ | ✅ | ✅ | ✅ | ✅ |
-| recovery | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| recovery | ✅ | ✅ | ✅ | ✅ | ✅ |
 | snapshots | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | repositories | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | templates | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -42,6 +42,7 @@
 | 5 | rest 全五维：页头对齐全局模式（副标题「直接调用集群 REST API」）；请求/响应/历史/保存查询四个面板抽 `panel()` helper 换 overview 同款卡片材质（Surface+Space(3) 圆角）；`statusColor` 硬编码健康色→主题语义（Success/Warning/Danger，需 *ui.Theme 参数）；响应正文 mono 走 `kit.SizeMono`；历史行加右键菜单（重新发送/填入标签）；⌘↩ 发送、⌘T 新建标签 | 259 tests green, vet 干净 |
 | 6 | nodes 全五维：与 indices 同构同套路——页头/表格/详情全换 Space 与字阶；表格 9 处 FontSize(12) 拆除；详情错误红→`t.Danger`；⌘R；详情 JSON 与 indices 详情统一为 mono+`kit.SizeMono`（两处 JSON 面板观感一致） | 259 tests green, vet 干净 |
 | 7 | shards 全五维：`stateColor` 硬编码→主题语义（STARTED Success/UNASSIGNED Danger/其余 Warning，加 *ui.Theme 参数）；页头/表格/reroute 条全换 Space 与字阶；表格 8 处 FontSize(12) 拆除；状态点 7px→Space(1.75)；操作错误→`t.Danger`；⌘R | 259 tests green, vet 干净 |
+| 8 | recovery 全五维：`stageColor` 硬编码→主题语义（DONE Success/失败 Danger/进行中 Warning）；页头/表格全换 Space 与字阶；表格 7 处 FontSize(12) 拆除；阶段点→Space(1.75)；⌘R | 259 tests green, vet 干净 |
 
 ## 截图变化点
 
@@ -52,6 +53,7 @@
 - 轮 5（全部 11 张刷新，变化集中在 04-rest）：页头统一模式+副标题；四面板变 Surface 填充圆角卡片（与 overview 一致）；状态码颜色走主题语义（浅色 2xx 绿/4xx 黄/5xx 红，深色自动变体）
 - 轮 6（全部 11 张刷新，变化集中在 05-nodes）：表格正文走默认 13；详情面板 JSON 换 mono 等宽字体（indices 详情同步）
 - 轮 7（全部 11 张刷新，变化集中在 06-shards）：表格正文走默认 13；状态点颜色走主题语义（深色自动变体）；reroute 条间距随主题
+- 轮 8（全部 11 张刷新；recovery 页不在截图清单，变化同 shards 套路——表格正文/阶段点/间距全部主题化）
 
 ## 悬念（后续轮处理）
 

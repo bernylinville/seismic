@@ -24,15 +24,16 @@ type Row struct {
 	StartTime string `json:"start_time"`
 }
 
-// stageColor: DONE green, failed/aborted red, in-progress yellow.
-func stageColor(stage string) ui.Color {
+// stageColor: DONE Success, failed/aborted Danger, in-progress Warning —
+// the theme's semantic colors.
+func stageColor(t *ui.Theme, stage string) ui.Color {
 	switch stage {
 	case "DONE":
-		return ui.Hex("#2f9e63")
+		return t.Success
 	case "":
-		return ui.Hex("#d64545")
+		return t.Danger
 	default: // INDEX / VERIFY_INDEX / TRANSLOG / FINALIZE / INIT
-		return ui.Hex("#d9a406")
+		return t.Warning
 	}
 }
 
@@ -132,12 +133,14 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		m.load(h)
 	}
 	t := c.Theme()
+	// ⌘R 刷新，系统习惯。
+	c.OnShortcut(ui.Cmd, ui.KeyR, func() { m.load(h) })
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "分片恢复")).FontSize(19).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "{0} 条恢复记录", itoa(len(m.visibleRows())))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "分片恢复")).FontSize(kit.SizeTitle(t)).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 条恢复记录", itoa(len(m.visibleRows())))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
 			ui.SearchField(c, &m.filter).Label(kit.Tr(h.Lang(), "筛选索引…")).Placeholder(kit.Tr(h.Lang(), "筛选索引…")).Width(220)
@@ -161,22 +164,22 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			case 0:
 				ui.Text(c, r.Index).SingleLine()
 			case 1:
-				ui.Text(c, r.Shard).FontSize(12)
+				ui.Text(c, r.Shard)
 			case 2:
-				ui.Text(c, r.Type).FontSize(12)
+				ui.Text(c, r.Type)
 			case 3:
-				ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-					kit.Dot(c, 7, stageColor(r.Stage))
-					ui.Text(c, r.Stage).FontSize(12)
+				ui.Row(c).Gap(t.Space(1.5)).AlignItems(ui.Center).Children(func() {
+					kit.Dot(c, t.Space(1.75), stageColor(t, r.Stage))
+					ui.Text(c, r.Stage)
 				})
 			case 4:
-				ui.Text(c, r.Source).FontSize(12)
+				ui.Text(c, r.Source)
 			case 5:
-				ui.Text(c, r.Node).FontSize(12)
+				ui.Text(c, r.Node)
 			case 6:
-				ui.Text(c, r.StartTime).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, r.StartTime).TextColor(t.TextMuted)
 			}
-		}).Grow(1).Padding(0, 12, 0, 12)
+		}).Grow(1).Padding(0, t.Space(3), 0, t.Space(3))
 		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
 		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
 		m.prefs.Sync(h, "recovery", listState.Columns)
