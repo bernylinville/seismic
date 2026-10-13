@@ -3,6 +3,7 @@ package search
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -221,3 +222,79 @@ func TestRowDetail(t *testing.T) {
 }
 
 var _ kit.ModuleHost = (*fakeHost)(nil)
+
+// TestMappingCache 按 pattern 缓存：同 pattern 去重、切回命中、逐出上限、
+// 失败可重试。
+func TestMappingCache(t *testing.T) {
+	var mu sync.Mutex
+	mappingCalls := map[string]int{}
+	fail := map[string]bool{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/_mapping") {
+			pattern := strings.TrimPrefix(strings.TrimSuffix(r.URL.Path, "/_mapping"), "/")
+			mu.Lock()
+			mappingCalls[pattern]++
+			fl := fail[pattern]
+			mu.Unlock()
+			if fl {
+				w.WriteHeader(500)
+				w.Write([]byte(`{"error":"boom"}`))
+				return
+			}
+			w.Write([]byte(`{"logs-2024":{"mappings":{"properties":{"level":{"type":"keyword"},"host":{"properties":{"name":{"type":"keyword"}}}}}}}`))
+			return
+		}
+		w.Write([]byte(`{"took":1,"hits":{"total":{"value":0},"hits":[]}}`))
+	}))
+	t.Cleanup(srv.Close)
+	client, err := es.New(srv.URL, es.Auth{Type: es.AuthNone})
+	if err != nil {
+		t.Fatal(err)
+	}
+	host := &fakeHost{client: client}
+	m := New()
+
+	m.loadMapping(host) // pattern 为空：不发请求
+	if len(mappingCalls) != 0 {
+		t.Fatalf("empty pattern should not fetch, calls = %v", mappingCalls)
+	}
+
+	m.indexPattern = "logs-*"
+	m.loadMapping(host) // 首次拉取
+	m.loadMapping(host) // 已注入：去重
+	if got := mappingCalls["logs-*"]; got != 1 {
+		t.Fatalf("logs-* calls = %d, want 1", got)
+	}
+
+	m.indexPattern = "metrics-*"
+	m.loadMapping(host) // 新 pattern：拉取
+	m.indexPattern = "logs-*"
+	m.loadMapping(host) // 切回：命中缓存
+	if got := mappingCalls["logs-*"]; got != 1 {
+		t.Fatalf("cache miss refetched logs-*, calls = %d", got)
+	}
+	if got := mappingCalls["metrics-*"]; got != 1 {
+		t.Fatalf("metrics-* calls = %d, want 1", got)
+	}
+
+	// 失败后允许重试。
+	mu.Lock()
+	fail["metrics-*"] = true
+	mu.Unlock()
+	m.indexPattern = "metrics-*"
+	delete(m.mappingCache, mappingKey(host.ClusterKey(), "metrics-*"))
+	m.loadMapping(host) // 500
+	m.loadMapping(host) // mappedKey 已清空 → 重试
+	if got := mappingCalls["metrics-*"]; got != 3 {
+		t.Fatalf("metrics-* calls after failure+retry = %d, want 3", got)
+	}
+
+	// 容量逐出：塞满 2*mappingCacheMax 个 pattern 后缓存不超上限。
+	for i := 0; i < mappingCacheMax*2; i++ {
+		m.indexPattern = fmt.Sprintf("idx-%d-*", i)
+		m.loadMapping(host)
+	}
+	if len(m.mappingCache) > mappingCacheMax {
+		t.Fatalf("cache size = %d, want <= %d", len(m.mappingCache), mappingCacheMax)
+	}
+}

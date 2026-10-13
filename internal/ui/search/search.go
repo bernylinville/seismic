@@ -35,8 +35,12 @@ type Module struct {
 	ed    *editor.Editor
 	query string
 
-	mappedPattern string // 已注入补全 mapping 的 pattern
-	formatErr     string
+	mappedKey string // 已注入（或在途）mapping 的 cluster+pattern 键
+	// mappingCache 按 cluster+pattern 缓存拍平后的字段表，切回旧 pattern
+	// 免再拉；mappingOrder 是插入序，超过 mappingCacheMax 逐出最旧。
+	mappingCache map[string]map[string]editor.FieldInfo
+	mappingOrder []string
+	formatErr    string
 
 	from float64
 	size float64
@@ -348,28 +352,68 @@ func (m *Module) formatQuery() {
 	m.query = out
 }
 
+// mappingCacheMax 限制按 pattern 缓存的字段表个数（每个是拍平的
+// FieldInfo map，5k 索引的宽 pattern 也不至于占太多内存）。
+const mappingCacheMax = 16
+
+// mappingKey 是 mapping 缓存/去重的键：集群 + pattern。集群维度隔离，
+// 切换连接后旧缓存自然失效。
+func mappingKey(cluster, pattern string) string { return cluster + "\x00" + pattern }
+
 // loadMapping fetches the pattern's mappings and feeds the editor's
-// field-name completion (mapping-aware, see ADR 0003).
+// field-name completion (mapping-aware, see ADR 0003). 命中缓存直接注入；
+// 在途/已注入由 mappedKey 去重；换 pattern 会取消在途的旧拉取（同 key
+// 槽位，见 App.load），失败时清掉 mappedKey 允许重试。
 func (m *Module) loadMapping(h kit.ModuleHost) {
 	client := h.ES()
 	pattern := strings.TrimSpace(m.indexPattern)
-	if client == nil || pattern == "" || pattern == m.mappedPattern {
+	if client == nil || pattern == "" {
 		return
 	}
-	m.mappedPattern = pattern
+	key := mappingKey(h.ClusterKey(), pattern)
+	if key == m.mappedKey {
+		return // 已注入或在途
+	}
+	if fields, ok := m.mappingCache[key]; ok {
+		m.mappedKey = key
+		m.ed.SetMapping(fields)
+		return
+	}
+	m.mappedKey = key
 	h.Load("search-mapping",
 		func() {},
 		func(ctx context.Context) func() {
 			var reply map[string]mappingReply
 			_, err := client.RequestJSON(ctx, "GET",
 				es.CleanIndexName(pattern)+"/_mapping?allow_no_indices=true&ignore_unavailable=true", nil, &reply)
-			if err != nil {
-				return func() {}
+			return func() {
+				if err != nil {
+					if m.mappedKey == key {
+						m.mappedKey = "" // 拉取失败：允许下次重试
+					}
+					return
+				}
+				fields := flattenMappings(reply)
+				m.cacheMapping(key, fields)
+				m.ed.SetMapping(fields)
 			}
-			fields := flattenMappings(reply)
-			return func() { m.ed.SetMapping(fields) }
 		},
 	)
+}
+
+// cacheMapping 存一份字段表并按插入序逐出最旧的。
+func (m *Module) cacheMapping(key string, fields map[string]editor.FieldInfo) {
+	if m.mappingCache == nil {
+		m.mappingCache = map[string]map[string]editor.FieldInfo{}
+	}
+	if _, exists := m.mappingCache[key]; !exists {
+		m.mappingOrder = append(m.mappingOrder, key)
+		if len(m.mappingOrder) > mappingCacheMax {
+			delete(m.mappingCache, m.mappingOrder[0])
+			m.mappingOrder = m.mappingOrder[1:]
+		}
+	}
+	m.mappingCache[key] = fields
 }
 
 // mappingReply is the shape of one index's entry in a _mapping response.
