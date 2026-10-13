@@ -30,12 +30,14 @@ func (a *App) indicesPage(c *ui.Context) {
 		a.indicesLoad()
 	}
 	t := c.Theme()
+	// ⌘R 刷新，系统习惯。
+	c.OnShortcut(ui.Cmd, ui.KeyR, func() { a.indicesLoad() })
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(a.lang, "索引")).FontSize(19).Bold()
-				ui.Text(c, kit.Tr(a.lang, "{0} 个索引", len(s.visibleRows()))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(a.lang, "索引")).FontSize(kit.SizeTitle(t)).Bold()
+				ui.Text(c, kit.Tr(a.lang, "{0} 个索引", len(s.visibleRows()))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
 			ui.SearchField(c, &s.filter).Placeholder(kit.Tr(a.lang, "筛选索引…")).Width(220)
@@ -46,9 +48,9 @@ func (a *App) indicesPage(c *ui.Context) {
 		})
 
 		if s.actionErr != "" {
-			ui.Text(c, s.actionErr).FontSize(12).TextColor(ui.Hex("#d64545")).Padding(0, 20, 4, 20)
+			ui.Text(c, s.actionErr).FontSize(kit.SizeCaption(t)).TextColor(t.Danger).Padding(0, t.Space(5), t.Space(1), t.Space(5))
 		}
-		if stateText(c, a.lang, s.loading, s.err, len(s.rows) == 0, kit.Tr(a.lang, "还没有索引")) {
+		if kit.StateText(c, a.lang, s.loading, s.err, len(s.rows) == 0, kit.Tr(a.lang, "还没有索引")) {
 			return
 		}
 
@@ -83,24 +85,24 @@ func (a *App) indicesPage(c *ui.Context) {
 					}
 				})
 			case 1:
-				ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-					Circle(c, 7, kit.HealthColor(c, r.Health))
-					ui.Text(c, r.Health).FontSize(12)
+				ui.Row(c).Gap(t.Space(1.5)).AlignItems(ui.Center).Children(func() {
+					Circle(c, t.Space(1.75), kit.HealthColor(c, r.Health))
+					ui.Text(c, r.Health)
 				})
 			case 2:
-				ui.Text(c, r.Status).FontSize(12)
+				ui.Text(c, r.Status)
 			case 3:
-				ui.Text(c, r.DocsCount).FontSize(12)
+				ui.Text(c, r.DocsCount)
 			case 4:
-				ui.Text(c, r.StoreSize).FontSize(12)
+				ui.Text(c, r.StoreSize)
 			case 5:
-				ui.Text(c, r.Pri).FontSize(12)
+				ui.Text(c, r.Pri)
 			case 6:
-				ui.Text(c, r.Rep).FontSize(12)
+				ui.Text(c, r.Rep)
 			case 7:
-				ui.Text(c, r.CreationDate).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, r.CreationDate).TextColor(t.TextMuted)
 			}
-		}).Grow(1).Padding(0, 12, 0, 12)
+		}).Grow(1).Padding(0, t.Space(3), 0, t.Space(3))
 		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
 		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
 		s.prefs.Sync(a, "indices", listState.Columns)
@@ -117,11 +119,11 @@ func (a *App) indicesPage(c *ui.Context) {
 func (a *App) indicesDetailView(c *ui.Context) {
 	s := &a.indices
 	t := c.Theme()
-	ui.Column(c).Height(220).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
-		Background(t.Surface).Padding(12, 16, 12, 16).Gap(6).Children(func() {
-		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+	ui.Column(c).Height(t.Space(55)).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
+		Background(t.Surface).Padding(t.Space(3), t.Space(4), t.Space(3), t.Space(4)).Gap(t.Space(1.5)).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, s.detailName).Bold()
-			ui.Text(c, kit.Tr(a.lang, "· 设置")).TextColor(t.TextMuted).FontSize(12)
+			ui.Text(c, kit.Tr(a.lang, "· 设置")).TextColor(t.TextMuted).FontSize(kit.SizeCaption(t))
 			ui.Spacer(c)
 			if ui.Button(c, kit.Tr(a.lang, "关闭")).Clicked() {
 				s.detailName = ""
@@ -133,7 +135,7 @@ func (a *App) indicesDetailView(c *ui.Context) {
 			return
 		}
 		if len(s.detail) > 0 {
-			ui.Text(c, string(s.detail)).FontSize(12).Grow(1)
+			ui.Text(c, string(s.detail)).Grow(1)
 		}
 	})
 }

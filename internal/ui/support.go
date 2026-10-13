@@ -2,12 +2,8 @@ package ui
 
 import (
 	"context"
-	"errors"
-
-	"github.com/egoist/mygo/ui"
 
 	"seismic/internal/es"
-	"seismic/internal/ui/kit"
 )
 
 // es returns the connected cluster's client, nil when not connected.
@@ -66,40 +62,4 @@ func (a *App) cancelAllLoads() {
 	}
 	a.loads = nil
 	a.loadsMu.Unlock()
-}
-
-// errMessage flattens an error for display, surfacing the ES error body.
-func errMessage(err error) string {
-	if err == nil {
-		return ""
-	}
-	if httpErr, ok := err.(*es.HTTPError); ok {
-		return httpErr.Error()
-	}
-	return err.Error()
-}
-
-// loadingText renders a module's loading/error/empty state row; it returns
-// true when the module should not build its content this frame.
-func stateText(c *ui.Context, lang string, loading bool, err error, empty bool, emptyText string) bool {
-	t := c.Theme()
-	switch {
-	case loading:
-		ui.Text(c, kit.Tr(lang, "加载中…")).TextColor(t.TextMuted)
-		return true
-	case err != nil:
-		if errors.Is(err, context.Canceled) {
-			ui.Text(c, kit.Tr(lang, "已取消（切换了连接或被新查询取代）")).TextColor(t.TextMuted)
-			return true
-		}
-		ui.Column(c).Grow(1).Padding(16).Children(func() {
-			ui.Text(c, kit.Tr(lang, "请求失败")).Bold().TextColor(ui.Hex("#d64545"))
-			ui.Text(c, errMessage(err)).TextColor(t.TextMuted).FontSize(12)
-		})
-		return true
-	case empty:
-		ui.Text(c, emptyText).TextColor(t.TextMuted)
-		return true
-	}
-	return false
 }

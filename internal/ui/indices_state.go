@@ -147,7 +147,7 @@ func (a *App) indicesAction(name, index string, fn func(ctx context.Context, cli
 			return func() {
 				s.detailLoading = false
 				if err != nil {
-					s.actionErr = name + " 失败: " + errMessage(err)
+					s.actionErr = name + " 失败: " + kit.ErrMessage(err)
 					return
 				}
 				a.indicesLoad()
@@ -170,7 +170,7 @@ func (a *App) indicesShowDetail(index string) {
 			return func() {
 				s.detailLoading = false
 				if err != nil {
-					s.actionErr = errMessage(err)
+					s.actionErr = kit.ErrMessage(err)
 					s.detail = nil
 					return
 				}
