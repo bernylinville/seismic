@@ -84,7 +84,7 @@ func (a *App) indicesPage(c *ui.Context) {
 				})
 			case 1:
 				ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
-					Circle(c, 7, healthColor(c, r.Health))
+					Circle(c, 7, kit.HealthColor(c, r.Health))
 					ui.Text(c, r.Health).FontSize(12)
 				})
 			case 2:

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/egoist/mygo/ui"
-
 	"seismic/internal/conn"
 	"seismic/internal/db"
 	"seismic/internal/ui/kit"
@@ -185,9 +183,4 @@ func humanSize(bytes int64) string {
 		b /= unit
 	}
 	return fmt.Sprintf("%.1f PB", b)
-}
-
-// healthDotColor maps a cluster status to the app's health color.
-func healthDotColor(c *ui.Context, health string) ui.Color {
-	return healthColor(c, health)
 }

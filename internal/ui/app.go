@@ -153,17 +153,13 @@ func (a *App) invalidate() {
 // View builds the window: a welcome page until a cluster is connected,
 // then toolbar, sidebar and routed module pages, and the status bar.
 func (a *App) View(c *ui.Context) {
-	// 方向 A「原生工具流」：系统主题 + elasticvue 品牌绿系 teal accent。
-	t := *c.Theme()
-	t.Accent = ui.Hex("#0e8c7f")
-	c.SetTheme(&t)
-
+	// 全窗口坐在材质上：侧边栏与标题栏透出毛玻璃，内容列自绘不透明背景。
+	if c.Vibrancy() {
+		c.Root().Background(ui.Transparent)
+	}
 	if !a.Connected {
 		a.welcome(c)
 		return
-	}
-	if c.Vibrancy() {
-		c.Root().Background(ui.Transparent)
 	}
 	ui.Column(c).Fill().Children(func() {
 		a.toolbar(c)
@@ -271,7 +267,7 @@ func (a *App) statusbar(c *ui.Context) {
 	t := c.Theme()
 	ui.Row(c).Height(26).Padding(12, 8, 0, 8).BorderWidth(0, 0, 1, 0).BorderColor(t.Border).
 		Gap(14).AlignItems(ui.Center).Children(func() {
-		Circle(c, 8, healthColor(c, a.ClusterHealth))
+		Circle(c, 8, kit.HealthColor(c, a.ClusterHealth))
 		ui.Text(c, a.ClusterName).FontSize(12)
 		if a.DocsCount != "" {
 			ui.Text(c, kit.Tr(a.lang, "{0} 文档", a.DocsCount)).FontSize(12).TextColor(t.TextMuted)
@@ -290,19 +286,6 @@ func (a *App) statusbar(c *ui.Context) {
 			ui.Text(c, a.UpdatedText).FontSize(12).TextColor(t.TextMuted)
 		}
 	})
-}
-
-func healthColor(c *ui.Context, health string) ui.Color {
-	switch health {
-	case "green":
-		return ui.Hex("#2f9e63")
-	case "yellow":
-		return ui.Hex("#d9a406")
-	case "red":
-		return ui.Hex("#d64545")
-	default:
-		return c.Theme().TextMuted
-	}
 }
 
 // Circle draws a small filled dot, the app's one health signal.
@@ -399,9 +382,9 @@ func (a *App) connectFormView(c *ui.Context) {
 			color := t.TextMuted
 			msg := f.testMsg
 			if f.testOK {
-				color = ui.Hex("#2f9e63")
+				color = t.Success
 			} else {
-				color = ui.Hex("#d64545")
+				color = t.Danger
 				if strings.Contains(strings.ToLower(msg), "x509") || strings.Contains(strings.ToLower(msg), "certificate") {
 					msg += "\n" + kit.Tr(a.lang, "证书是自己签的？勾「跳过证书校验」")
 				}

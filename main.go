@@ -26,6 +26,8 @@ func main() {
 			MinWidth:  960,
 			MinHeight: 600,
 			StateKey:  "main",
+			// 侧边栏材质：透明页面上透出系统毛玻璃，标题栏随之融合。
+			Vibrancy:  mygo.VibrancySidebar,
 			Content:   ui.View(a.View),
 		})
 		a.Attach(win, ctx)

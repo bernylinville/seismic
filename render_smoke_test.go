@@ -86,6 +86,8 @@ func TestRenderSmokeScreens(t *testing.T) {
 	a.SetConnectForm("prod-es-8", srv.URL, "none")
 
 	tt := ui.NewTester(a.View, 1440, 900)
+	// 按实机窗口的材质态截（VibrancySidebar）：侧边栏与标题栏透明。
+	tt.SetVibrancy(true)
 	if err := tt.Click("保存并连接"); err != nil {
 		t.Fatalf("click save: %v", err)
 	}

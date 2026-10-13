@@ -48,17 +48,19 @@ func ErrMessage(err error) string {
 	return err.Error()
 }
 
-// HealthColor maps green/yellow/red to the app's health colors.
+// HealthColor maps green/yellow/red to the theme's semantic colors, which
+// follow the system's light and dark appearance.
 func HealthColor(c *ui.Context, health string) ui.Color {
+	t := c.Theme()
 	switch health {
 	case "green":
-		return ui.Hex("#2f9e63")
+		return t.Success
 	case "yellow":
-		return ui.Hex("#d9a406")
+		return t.Warning
 	case "red":
-		return ui.Hex("#d64545")
+		return t.Danger
 	default:
-		return c.Theme().TextMuted
+		return t.TextMuted
 	}
 }
 
@@ -81,7 +83,7 @@ func StateText(c *ui.Context, lang string, loading bool, err error, empty bool, 
 			return true
 		}
 		ui.Column(c).Grow(1).Padding(16).Children(func() {
-			ui.Text(c, Tr(lang, "请求失败")).Bold().TextColor(ui.Hex("#d64545"))
+			ui.Text(c, Tr(lang, "请求失败")).Bold().TextColor(t.Danger)
 			ui.Text(c, ErrMessage(err)).TextColor(t.TextMuted).FontSize(12)
 		})
 		return true
