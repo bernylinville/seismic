@@ -20,5 +20,6 @@ func init() {
 		"保存的查询":       "Saved queries",
 		"保存常用请求，一键再发": "Save frequent requests to resend in one click",
 		"删除":          "Delete",
+		"响应 {0} 超过 1 MB，跳过格式化，原样显示": "Response {0} exceeds 1 MB; shown raw without formatting",
 	})
 }

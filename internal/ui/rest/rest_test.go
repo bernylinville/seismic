@@ -1,16 +1,17 @@
 package rest
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/egoist/mygo/ui"
 	"seismic/internal/db"
 	"seismic/internal/es"
 	"seismic/internal/ui/kit"
-	"strings"
 )
 
 // fakeHost is a kit.ModuleHost over an httptest ES and a real SQLite store.
@@ -240,3 +241,25 @@ func TestRestEnglishUI(t *testing.T) {
 }
 
 var _ kit.ModuleHost = (*fakeHost)(nil)
+
+// TestFormatJSONLargeSkipsIndent 大响应跳过全量缩进，原样返回并带提示。
+func TestFormatJSONLargeSkipsIndent(t *testing.T) {
+	small := []byte(`{"a":1}`)
+	if got := formatJSON("zh", small); got != "{\n  \"a\": 1\n}" {
+		t.Errorf("small payload should be indented, got %q", got)
+	}
+
+	big := append([]byte(`{"pad":"`), bytes.Repeat([]byte("x"), formatLimit+64)...)
+	big = append(big, '"', '}')
+	got := formatJSON("zh", big)
+	if !strings.Contains(got, "跳过格式化") {
+		t.Error("oversized payload should carry the skip notice")
+	}
+	if !strings.Contains(got, `"pad"`) || strings.Contains(got, "\n  \"pad\"") {
+		t.Error("oversized payload should stay raw (unindented)")
+	}
+
+	if got := formatJSON("en", big); !strings.Contains(got, "shown raw") {
+		t.Error("english notice missing")
+	}
+}

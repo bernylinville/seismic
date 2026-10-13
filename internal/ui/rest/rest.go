@@ -303,6 +303,7 @@ func (m *Module) send(h kit.ModuleHost) {
 		param = body
 	}
 	key := h.ClusterKey()
+	lang := h.Lang() // 在主线程取一次，worker 里不再读共享状态
 
 	tb.sending = true
 	h.Load(
@@ -327,7 +328,7 @@ func (m *Module) send(h kit.ModuleHost) {
 				}
 				errMsg = kit.ErrMessage(err)
 			}
-			formatted := formatJSON(out)
+			formatted := formatJSON(lang, out)
 
 			if h.DB() != nil {
 				_, _ = h.DB().AddHistory(context.Background(), db.HistoryEntry{
@@ -359,10 +360,20 @@ func (m *Module) send(h kit.ModuleHost) {
 	)
 }
 
-// formatJSON indents valid JSON payloads, and leaves anything else as is.
-func formatJSON(b []byte) string {
+// formatLimit 以上跳过全量 json.Indent：大响应的缩进副本是原文的
+// 1.5–2 倍，多 MB 时纯属浪费，原样显示即可。
+const formatLimit = 1 << 20 // 1 MiB
+
+// formatJSON indents valid JSON payloads, and leaves anything else as is;
+// oversized payloads come back raw with a notice line.
+func formatJSON(lang string, b []byte) string {
 	if len(bytes.TrimSpace(b)) == 0 {
 		return ""
+	}
+	if len(b) > formatLimit {
+		notice := kit.Tr(lang, "响应 {0} 超过 1 MB，跳过格式化，原样显示",
+			fmt.Sprintf("%.1f MB", float64(len(b))/(1<<20)))
+		return notice + "\n\n" + string(b)
 	}
 	var buf bytes.Buffer
 	if err := json.Indent(&buf, b, "", "  "); err != nil {
