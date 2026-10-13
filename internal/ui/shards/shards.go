@@ -26,15 +26,16 @@ type Row struct {
 	Unassigned string      `json:"unassigned.reason"`
 }
 
-// stateColor maps shard state to the theme's semantic colors.
-func stateColor(t *ui.Theme, state string) ui.Color {
+// stateLevel maps shard state to a semantic level (STARTED Success,
+// UNASSIGNED Danger, 过渡态 Warning).
+func stateLevel(state string) kit.Level {
 	switch state {
 	case "STARTED":
-		return t.Success
+		return kit.LevelSuccess
 	case "UNASSIGNED":
-		return t.Danger
+		return kit.LevelDanger
 	default: // INITIALIZING / RELOCATING / POST_RECOVERY …
-		return t.Warning
+		return kit.LevelWarning
 	}
 }
 
@@ -277,7 +278,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 				ui.Text(c, kit.Tr(h.Lang(), prirepLabel(r.Prirep)))
 			case 3:
 				ui.Row(c).Gap(t.Space(1.5)).AlignItems(ui.Center).Children(func() {
-					kit.Dot(c, t.Space(1.75), stateColor(t, r.State))
+					kit.Dot(c, t.Space(1.75), kit.LevelColor(t, stateLevel(r.State)))
 					ui.Text(c, r.State)
 				})
 			case 4:

@@ -24,16 +24,16 @@ type Row struct {
 	StartTime string `json:"start_time"`
 }
 
-// stageColor: DONE Success, failed/aborted Danger, in-progress Warning —
-// the theme's semantic colors.
-func stageColor(t *ui.Theme, stage string) ui.Color {
+// stageLevel: DONE Success、进行中 Warning；空 stage 是尚未开始，
+// 中性而非失败红。
+func stageLevel(stage string) kit.Level {
 	switch stage {
 	case "DONE":
-		return t.Success
+		return kit.LevelSuccess
 	case "":
-		return t.Danger
+		return kit.LevelNeutral
 	default: // INDEX / VERIFY_INDEX / TRANSLOG / FINALIZE / INIT
-		return t.Warning
+		return kit.LevelWarning
 	}
 }
 
@@ -169,7 +169,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 				ui.Text(c, r.Type)
 			case 3:
 				ui.Row(c).Gap(t.Space(1.5)).AlignItems(ui.Center).Children(func() {
-					kit.Dot(c, t.Space(1.75), stageColor(t, r.Stage))
+					kit.Dot(c, t.Space(1.75), kit.LevelColor(t, stageLevel(r.Stage)))
 					ui.Text(c, r.Stage)
 				})
 			case 4:

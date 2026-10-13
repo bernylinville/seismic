@@ -112,7 +112,7 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			switch col {
 			case 0:
 				ui.Text(c, sectionLabel(h.Lang(), r.section == "transient")).
-					TextColor(sectionColor(c, r.section))
+					TextColor(kit.LevelColor(c.Theme(), sectionLevel(r.section)))
 			case 1:
 				ui.Text(c, r.key).SingleLine()
 			case 2:
@@ -132,12 +132,11 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	m.editDialog(h, c)
 }
 
-func sectionColor(c *ui.Context, section string) ui.Color {
-	t := c.Theme()
+func sectionLevel(section string) kit.Level {
 	if section == "transient" {
-		return t.Warning
+		return kit.LevelWarning
 	}
-	return t.Success
+	return kit.LevelSuccess
 }
 
 func (m *Module) editDialog(h kit.ModuleHost, c *ui.Context) {

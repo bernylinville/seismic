@@ -199,7 +199,7 @@ func (m *Module) responseView(c *ui.Context, t *ui.Theme, lang string) {
 			return
 		}
 		ui.Row(c).Gap(t.Space(3)).Children(func() {
-			ui.Text(c, fmt.Sprintf("%d", tb.status)).Bold().TextColor(statusColor(t, tb.status))
+			ui.Text(c, fmt.Sprintf("%d", tb.status)).Bold().TextColor(kit.LevelColor(t, statusLevel(tb.status)))
 			ui.Text(c, kit.Tr(lang, "耗时 {0} ms", tb.durMS)).TextColor(t.TextMuted).FontSize(kit.SizeCaption(t))
 			if tb.respErr != "" {
 				ui.Text(c, tb.respErr).TextColor(t.Danger).FontSize(kit.SizeCaption(t))
@@ -213,17 +213,18 @@ func (m *Module) responseView(c *ui.Context, t *ui.Theme, lang string) {
 	})
 }
 
-// statusColor maps the response code to the theme's health semantics.
-func statusColor(t *ui.Theme, code int) ui.Color {
+// statusLevel: 2xx Success、4xx Warning、5xx Danger；1xx/3xx 是信息性
+// 响应，走中性色而非警示黄。
+func statusLevel(code int) kit.Level {
 	switch {
 	case code >= 200 && code < 300:
-		return t.Success
+		return kit.LevelSuccess
 	case code >= 400 && code < 500:
-		return t.Warning
+		return kit.LevelWarning
 	case code >= 500:
-		return t.Danger
+		return kit.LevelDanger
 	default:
-		return t.Warning
+		return kit.LevelNeutral
 	}
 }
 
@@ -252,9 +253,9 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 			ui.List(c, nil, len(m.history), func(i int) {
 				e := m.history[i]
 				row := ui.Row(c).Gap(t.Space(2)).Children(func() {
-					ui.Text(c, e.Method).TextColor(statusColor(t, e.Status)).Width(52)
+					ui.Text(c, e.Method).TextColor(kit.LevelColor(t, statusLevel(e.Status))).Width(52)
 					ui.Text(c, e.Path).Grow(1)
-					ui.Text(c, fmt.Sprintf("%d", e.Status)).TextColor(statusColor(t, e.Status))
+					ui.Text(c, fmt.Sprintf("%d", e.Status)).TextColor(kit.LevelColor(t, statusLevel(e.Status)))
 				})
 				row.ContextMenu(func(menu *ui.Menu) {
 					if menu.Item(kit.Tr(h.Lang(), "重新发送")).Chosen() {

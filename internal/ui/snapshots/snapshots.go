@@ -246,7 +246,7 @@ func (m *Module) snapshotsTable(h kit.ModuleHost, c *ui.Context) {
 			ui.Text(c, r.Snapshot).SingleLine()
 		case 1:
 			ui.Row(c).Gap(t.Space(1.5)).AlignItems(ui.Center).Children(func() {
-				kit.Dot(c, t.Space(1.75), stateColor(t, r.State))
+				kit.Dot(c, t.Space(1.75), kit.LevelColor(t, stateLevel(r.State)))
 				ui.Text(c, r.State)
 			})
 		case 2:
@@ -258,7 +258,7 @@ func (m *Module) snapshotsTable(h kit.ModuleHost, c *ui.Context) {
 		case 5:
 			ui.Text(c, strconv.Itoa(r.Shards.Successful))
 		case 6:
-			ui.Text(c, strconv.Itoa(r.Shards.Failed)).TextColor(failColor(t, r.Shards.Failed))
+			ui.Text(c, strconv.Itoa(r.Shards.Failed)).TextColor(kit.LevelColor(t, failLevel(r.Shards.Failed)))
 		case 7:
 			ui.Row(c).Gap(t.Space(1.5)).Children(func() {
 				if ui.Button(c, kit.Tr(h.Lang(), "详情…")).Clicked() {
@@ -308,7 +308,7 @@ func (m *Module) detailView(c *ui.Context, lang string) {
 			ui.Text(c, kit.Tr(lang, "索引 {0} 个", len(m.detail.Indices)))
 			ui.Text(c, kit.Tr(lang, "分片：成功 {0} · 失败 {1} · 共 {2}",
 				m.detail.Shards.Successful, m.detail.Shards.Failed, m.detail.Shards.Total))
-			ui.Text(c, m.detail.State).TextColor(stateColor(t, m.detail.State))
+			ui.Text(c, m.detail.State).TextColor(kit.LevelColor(t, stateLevel(m.detail.State)))
 		})
 		sorted := slices.Clone(m.detail.Indices)
 		slices.Sort(sorted)
@@ -744,23 +744,23 @@ func fmtTime(ms int64) string {
 	return time.UnixMilli(ms).Local().Format("2006-01-02 15:04:05")
 }
 
-// stateColor maps a snapshot state to the health colors.
-func stateColor(t *ui.Theme, state string) ui.Color {
+// stateLevel maps a snapshot state to a semantic level.
+func stateLevel(state string) kit.Level {
 	switch state {
 	case "SUCCESS":
-		return t.Success
+		return kit.LevelSuccess
 	case "FAILED":
-		return t.Danger
+		return kit.LevelDanger
 	case "IN_PROGRESS", "PARTIAL":
-		return t.Warning
+		return kit.LevelWarning
 	}
-	return t.Success
+	return kit.LevelSuccess
 }
 
-// failColor marks failed shards red when there are any.
-func failColor(t *ui.Theme, n int) ui.Color {
+// failLevel marks failed shards Danger when there are any.
+func failLevel(n int) kit.Level {
 	if n > 0 {
-		return t.Danger
+		return kit.LevelDanger
 	}
-	return t.Success
+	return kit.LevelSuccess
 }
