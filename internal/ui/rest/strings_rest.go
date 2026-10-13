@@ -6,6 +6,9 @@ func init() {
 	kit.RegisterLang(map[string]string{
 		"新建标签": "New tab",
 		"关闭标签": "Close tab",
+		"直接调用集群 REST API": "Call the cluster REST API directly",
+		"重新发送": "Resend",
+		"填入标签": "Load into tab",
 		"路径":   "Path",
 		"发送":   "Send",
 		"{0} 请求不带正文；参数写在路径里，如 _cat/indices?v=true": "{0} sends no body; put params in the path, e.g. _cat/indices?v=true",

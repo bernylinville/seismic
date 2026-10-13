@@ -74,30 +74,42 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 		m.reloadLists(h)
 	}
 
-	ui.Column(c).Fill().Padding(16).Gap(12).Children(func() {
-		ui.Row(c).Children(func() {
-			ui.Text(c, kit.Tr(h.Lang(), "控制台")).FontSize(20).Bold()
-		})
+	// ⌘↩ 发送当前标签的请求，⌘T 新建标签，浏览器的肌肉记忆。
+	c.OnShortcut(ui.Cmd, ui.KeyEnter, func() { m.send(h) })
+	c.OnShortcut(ui.Cmd, ui.KeyT, func() {
+		m.tabs = append(m.tabs, newTab())
+		m.active = len(m.tabs) - 1
+	})
 
-		ui.Row(c).Gap(8).Children(func() {
-			m.tabStrip(c)
-			if ui.Button(c, kit.Tr(h.Lang(), "新建标签")).Clicked() {
-				m.tabs = append(m.tabs, newTab())
-				m.active = len(m.tabs) - 1
-			}
-			if ui.Button(c, kit.Tr(h.Lang(), "关闭标签")).Clicked() {
-				m.closeTab()
-			}
-		})
-
-		ui.Row(c).Fill().Gap(12).Children(func() {
-			// 左侧：请求编辑 + 响应。
-			ui.Column(c).Grow(1).Gap(8).Children(func() {
-				m.requestView(h, c)
-				m.responseView(c, t, h.Lang())
+	ui.Column(c).Fill().Children(func() {
+		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
+			ui.Column(c).Children(func() {
+				ui.Text(c, kit.Tr(h.Lang(), "控制台")).FontSize(kit.SizeTitle(t)).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "直接调用集群 REST API")).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			})
-			// 右侧：历史 + 保存的查询。
-			m.sideView(h, c, t)
+		})
+
+		ui.Column(c).Grow(1).Padding(0, t.Space(5), t.Space(4), t.Space(5)).Gap(t.Space(3)).Children(func() {
+			ui.Row(c).Gap(t.Space(2)).Children(func() {
+				m.tabStrip(c)
+				if ui.Button(c, kit.Tr(h.Lang(), "新建标签")).Clicked() {
+					m.tabs = append(m.tabs, newTab())
+					m.active = len(m.tabs) - 1
+				}
+				if ui.Button(c, kit.Tr(h.Lang(), "关闭标签")).Clicked() {
+					m.closeTab()
+				}
+			})
+
+			ui.Row(c).Fill().Gap(t.Space(3)).Children(func() {
+				// 左侧：请求编辑 + 响应。
+				ui.Column(c).Grow(1).Gap(t.Space(2)).Children(func() {
+					m.requestView(h, c)
+					m.responseView(c, t, h.Lang())
+				})
+				// 右侧：历史 + 保存的查询。
+				m.sideView(h, c, t)
+			})
 		})
 	})
 }
@@ -133,13 +145,20 @@ func (m *Module) closeTab() {
 	}
 }
 
+// panel draws one of the page's grouped cards, filled as the overview's.
+func panel(c *ui.Context) ui.Element {
+	t := c.Theme()
+	return ui.Column(c).Background(t.Surface).Radius(t.Space(3)).
+		Border(1, t.Border).Padding(t.Space(3)).Gap(t.Space(2))
+}
+
 // requestView renders method/path/body of the active tab plus the send row.
 func (m *Module) requestView(h kit.ModuleHost, c *ui.Context) {
 	tb := &m.tabs[m.active]
 	t := c.Theme()
 
-	ui.Column(c).Border(1, t.Border).Radius(8).Padding(12).Gap(8).Children(func() {
-		ui.Row(c).Gap(8).Children(func() {
+	panel(c).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).Children(func() {
 			ui.Select(c, &tb.method, httpMethods).Width(120)
 			if path := ui.TextInput(c, &tb.path).Label(kit.Tr(h.Lang(), "路径")).Grow(1); path.Submitted() {
 				m.send(h)
@@ -151,14 +170,14 @@ func (m *Module) requestView(h kit.ModuleHost, c *ui.Context) {
 
 		if tb.method == "GET" || tb.method == "HEAD" {
 			ui.Text(c, kit.Tr(h.Lang(), "{0} 请求不带正文；参数写在路径里，如 _cat/indices?v=true", tb.method)).
-				TextColor(t.TextMuted).FontSize(12)
+				TextColor(t.TextMuted).FontSize(kit.SizeCaption(t))
 		} else {
-			ui.Column(c).Height(150).Border(1, t.Border).Radius(6).Children(func() {
+			ui.Column(c).Height(150).Border(1, t.Border).Radius(t.Radius).Children(func() {
 				m.editorFor(tb).View(c)
 			})
 		}
 
-		ui.Row(c).Gap(8).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).Children(func() {
 			ui.TextInput(c, &m.saveName).Label(kit.Tr(h.Lang(), "查询名称")).Placeholder(kit.Tr(h.Lang(), "查询名称")).Width(200)
 			if ui.Button(c, kit.Tr(h.Lang(), "保存查询")).Clicked() {
 				m.saveQuery(h)
@@ -174,45 +193,45 @@ func (m *Module) requestView(h kit.ModuleHost, c *ui.Context) {
 func (m *Module) responseView(c *ui.Context, t *ui.Theme, lang string) {
 	tb := &m.tabs[m.active]
 
-	ui.Column(c).Grow(1).Border(1, t.Border).Radius(8).Padding(12).Gap(8).Children(func() {
+	panel(c).Grow(1).Children(func() {
 		if !tb.sent {
 			ui.Text(c, kit.Tr(lang, "还没发过请求")).TextColor(t.TextMuted)
 			return
 		}
-		ui.Row(c).Gap(12).Children(func() {
-			ui.Text(c, fmt.Sprintf("%d", tb.status)).Bold().TextColor(statusColor(tb.status))
-			ui.Text(c, kit.Tr(lang, "耗时 {0} ms", tb.durMS)).TextColor(t.TextMuted).FontSize(12)
+		ui.Row(c).Gap(t.Space(3)).Children(func() {
+			ui.Text(c, fmt.Sprintf("%d", tb.status)).Bold().TextColor(statusColor(t, tb.status))
+			ui.Text(c, kit.Tr(lang, "耗时 {0} ms", tb.durMS)).TextColor(t.TextMuted).FontSize(kit.SizeCaption(t))
 			if tb.respErr != "" {
-				ui.Text(c, tb.respErr).TextColor(ui.Hex("#d64545")).FontSize(12)
+				ui.Text(c, tb.respErr).TextColor(t.Danger).FontSize(kit.SizeCaption(t))
 			}
 		})
 		out := tb.resp
 		if out == "" {
 			out = tb.respErr
 		}
-		ui.TextArea(c, &out).Font("monospace").ReadOnly(true).Lines(4, 20).Grow(1)
+		ui.TextArea(c, &out).Font("monospace").FontSize(kit.SizeMono(t)).ReadOnly(true).Lines(4, 20).Grow(1)
 	})
 }
 
-// statusColor maps the response code to the health palette.
-func statusColor(code int) ui.Color {
+// statusColor maps the response code to the theme's health semantics.
+func statusColor(t *ui.Theme, code int) ui.Color {
 	switch {
 	case code >= 200 && code < 300:
-		return ui.Hex("#2f9e63")
+		return t.Success
 	case code >= 400 && code < 500:
-		return ui.Hex("#d9a406")
+		return t.Warning
 	case code >= 500:
-		return ui.Hex("#d64545")
+		return t.Danger
 	default:
-		return ui.Hex("#d9a406")
+		return t.Warning
 	}
 }
 
 // sideView renders history and saved queries.
 func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
-	ui.Column(c).Width(280).Gap(12).Children(func() {
+	ui.Column(c).Width(280).Gap(t.Space(3)).Children(func() {
 		// 历史
-		ui.Column(c).Border(1, t.Border).Radius(8).Padding(12).Gap(8).Grow(1).Children(func() {
+		panel(c).Grow(1).Children(func() {
 			ui.Row(c).Children(func() {
 				ui.Text(c, kit.Tr(h.Lang(), "历史")).Bold().Grow(1)
 				if ui.Button(c, kit.Tr(h.Lang(), "清空历史")).Clicked() {
@@ -220,7 +239,7 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 				}
 			})
 			if m.listsErr != "" {
-				ui.Text(c, m.listsErr).TextColor(ui.Hex("#d64545")).FontSize(12)
+				ui.Text(c, m.listsErr).TextColor(t.Danger).FontSize(kit.SizeCaption(t))
 			}
 			if len(m.history) == 0 {
 				if m.histLoading {
@@ -232,10 +251,19 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 			}
 			ui.List(c, nil, len(m.history), func(i int) {
 				e := m.history[i]
-				row := ui.Row(c).Gap(8).Children(func() {
-					ui.Text(c, e.Method).TextColor(statusColor(e.Status)).FontSize(12).Width(52)
-					ui.Text(c, e.Path).FontSize(12).Grow(1)
-					ui.Text(c, fmt.Sprintf("%d", e.Status)).TextColor(statusColor(e.Status)).FontSize(12)
+				row := ui.Row(c).Gap(t.Space(2)).Children(func() {
+					ui.Text(c, e.Method).TextColor(statusColor(t, e.Status)).Width(52)
+					ui.Text(c, e.Path).Grow(1)
+					ui.Text(c, fmt.Sprintf("%d", e.Status)).TextColor(statusColor(t, e.Status))
+				})
+				row.ContextMenu(func(menu *ui.Menu) {
+					if menu.Item(kit.Tr(h.Lang(), "重新发送")).Chosen() {
+						m.applyToActive(e.Method, e.Path, e.Body)
+						m.send(h)
+					}
+					if menu.Item(kit.Tr(h.Lang(), "填入标签")).Chosen() {
+						m.applyToActive(e.Method, e.Path, e.Body)
+					}
 				})
 				if row.Clicked() {
 					m.applyToActive(e.Method, e.Path, e.Body)
@@ -244,7 +272,7 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 		})
 
 		// 保存的查询
-		ui.Column(c).Border(1, t.Border).Radius(8).Padding(12).Gap(8).Children(func() {
+		panel(c).Children(func() {
 			ui.Text(c, kit.Tr(h.Lang(), "保存的查询")).Bold()
 			if len(m.saved) == 0 {
 				ui.Text(c, kit.Tr(h.Lang(), "保存常用请求，一键再发")).TextColor(t.TextMuted)
@@ -252,9 +280,9 @@ func (m *Module) sideView(h kit.ModuleHost, c *ui.Context, t *ui.Theme) {
 			}
 			ui.List(c, nil, len(m.saved), func(i int) {
 				q := m.saved[i]
-				row := ui.Row(c).Gap(8).Children(func() {
-					ui.Text(c, q.Name).FontSize(12).Grow(1)
-					ui.Text(c, q.Method).TextColor(t.TextMuted).FontSize(12)
+				row := ui.Row(c).Gap(t.Space(2)).Children(func() {
+					ui.Text(c, q.Name).Grow(1)
+					ui.Text(c, q.Method).TextColor(t.TextMuted)
 					if ui.Button(c, kit.Tr(h.Lang(), "删除")).Clicked() {
 						m.deleteQuery(h, q.ID)
 					}

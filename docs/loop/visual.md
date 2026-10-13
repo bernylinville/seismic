@@ -20,7 +20,7 @@
 | overview | ✅ | ✅ | ✅ | ✅ | ✅ |
 | indices | ✅ | ✅ | ✅ | ✅ | ✅ |
 | search | ✅ | ✅ | ✅ | ✅ | ✅ |
-| rest | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| rest | ✅ | ✅ | ✅ | ✅ | ✅ |
 | nodes | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | shards | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | recovery | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -39,6 +39,7 @@
 | 2 | overview 全五维：kit 新增字号阶梯 `SizeCaption/SizeBody/SizeTitle/SizeLarge`（Rem 相对推导，跟随系统字体设置，对齐 macOS 11/13/17/26）；四张卡抽 `card()` helper——Surface 填充 + Space(3) 圆角 + 1px 边（系统设置分组卡片观感）；全部 pixel padding/gap 换 `t.Space(n)`；标题 19→17、正文 12→13、caption 12→11 对齐系统字阶；⌘R 刷新快捷键（页内作用域） | 259 tests green, vet 干净 |
 | 3 | indices 全五维：表格单元格去掉 8 处 `FontSize(12)` 走主题默认 13；操作错误色 `#d64545`→`t.Danger`；页头/表格/详情面板 padding 全换 `t.Space(n)`、页头标题/计数走字阶；健康点 7px→Space(1.75)；⌘R 刷新；顺带删 support.go 的 `stateText`/`errMessage`（kit.StateText/kit.ErrMessage 的重复实现，含最后一处壳层硬编码红） | 259 tests green, vet 干净 |
 | 4 | search 全五维：页头对齐全局模式（裸 20px 标题+整页 Padding(16) → 标题 17+副标题 caption+标准页头/内容边距）；3 处错误红→`t.Danger`；表格 4 处 FontSize(12) 拆除走默认；查询区/结果区 gap 全换 Space；编辑器容器圆角 6→`t.Radius`；详情面板走 Space + mono 字号新增 `kit.SizeMono`（代码文本统一定义）；⌘R/⌘↩ 均重第一页跑搜索（新增副标题字符串 zh/en） | 259 tests green, vet 干净 |
+| 5 | rest 全五维：页头对齐全局模式（副标题「直接调用集群 REST API」）；请求/响应/历史/保存查询四个面板抽 `panel()` helper 换 overview 同款卡片材质（Surface+Space(3) 圆角）；`statusColor` 硬编码健康色→主题语义（Success/Warning/Danger，需 *ui.Theme 参数）；响应正文 mono 走 `kit.SizeMono`；历史行加右键菜单（重新发送/填入标签）；⌘↩ 发送、⌘T 新建标签 | 259 tests green, vet 干净 |
 
 ## 截图变化点
 
@@ -46,6 +47,7 @@
 - 轮 2（全部 11 张刷新，变化集中在 01-overview）：四卡由透明+边框变 Surface 填充圆角分组卡片；页标题 19→17、卡内正文字号对齐系统阶梯（caption 11 / body 13 / large 26）；卡间距/内距换主题 Space 单位，密度略收紧
 - 轮 3（全部 11 张刷新，变化集中在 02-indices/10-indices-dark/11-indices-en）：表格正文 12→主题默认 13（更接近系统表格）；操作错误红改主题 Danger（深色下自动变亮红）；间距换 Space 单位
 - 轮 4（全部 11 张刷新，变化集中在 03-search）：页头从裸 20px 标题变为「标题+副标题」全局统一模式；表格正文走默认 13；错误文案主题红；编辑器外框圆角随主题
+- 轮 5（全部 11 张刷新，变化集中在 04-rest）：页头统一模式+副标题；四面板变 Surface 填充圆角卡片（与 overview 一致）；状态码颜色走主题语义（浅色 2xx 绿/4xx 黄/5xx 红，深色自动变体）
 
 ## 悬念（后续轮处理）
 
