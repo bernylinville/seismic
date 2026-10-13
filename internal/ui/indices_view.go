@@ -135,7 +135,7 @@ func (a *App) indicesDetailView(c *ui.Context) {
 			return
 		}
 		if len(s.detail) > 0 {
-			ui.Text(c, string(s.detail)).Grow(1)
+			ui.Text(c, string(s.detail)).Font("monospace").FontSize(kit.SizeMono(t)).Grow(1)
 		}
 	})
 }

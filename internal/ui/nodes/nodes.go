@@ -287,12 +287,14 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 	if !m.loadedOnce && !m.loading && h.ES() != nil {
 		m.load(h)
 	}
+	// ⌘R 刷新，系统习惯。
+	c.OnShortcut(ui.Cmd, ui.KeyR, func() { m.load(h) })
 
 	ui.Column(c).Fill().Children(func() {
-		ui.Row(c).Padding(16, 20, 8, 20).Gap(10).AlignItems(ui.Center).Children(func() {
+		ui.Row(c).Padding(t.Space(4), t.Space(5), t.Space(2), t.Space(5)).Gap(t.Space(2.5)).AlignItems(ui.Center).Children(func() {
 			ui.Column(c).Children(func() {
-				ui.Text(c, kit.Tr(h.Lang(), "节点")).FontSize(19).Bold()
-				ui.Text(c, kit.Tr(h.Lang(), "{0} 个节点", strconv.Itoa(len(m.visibleRows())))).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, kit.Tr(h.Lang(), "节点")).FontSize(kit.SizeTitle(t)).Bold()
+				ui.Text(c, kit.Tr(h.Lang(), "{0} 个节点", strconv.Itoa(len(m.visibleRows())))).FontSize(kit.SizeCaption(t)).TextColor(t.TextMuted)
 			})
 			ui.Spacer(c)
 			ui.SearchField(c, &m.filter).Placeholder(kit.Tr(h.Lang(), "筛选节点…")).Width(200)
@@ -317,25 +319,25 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 			case 0:
 				ui.Text(c, r.Name.String()).SingleLine()
 			case 1:
-				ui.Text(c, r.IP.String()).FontSize(12)
+				ui.Text(c, r.IP.String())
 			case 2:
-				ui.Text(c, r.Role.String()).FontSize(12)
+				ui.Text(c, r.Role.String())
 			case 3:
-				ui.Text(c, r.HeapPercent.String()+"%").FontSize(12)
+				ui.Text(c, r.HeapPercent.String()+"%")
 			case 4:
-				ui.Text(c, r.RamPercent.String()+"%").FontSize(12)
+				ui.Text(c, r.RamPercent.String()+"%")
 			case 5:
-				ui.Text(c, r.CPU.String()+"%").FontSize(12)
+				ui.Text(c, r.CPU.String()+"%")
 			case 6:
-				ui.Text(c, r.Load1m.String()).FontSize(12)
+				ui.Text(c, r.Load1m.String())
 			case 7:
-				ui.Text(c, r.DiskPercent.String()+"%").FontSize(12)
+				ui.Text(c, r.DiskPercent.String()+"%")
 			case 8:
-				ui.Text(c, r.NodeRole.String()).FontSize(12).TextColor(t.TextMuted)
+				ui.Text(c, r.NodeRole.String()).TextColor(t.TextMuted)
 			case 9:
-				ui.Text(c, r.Version.String()).FontSize(12)
+				ui.Text(c, r.Version.String())
 			}
-		}).Grow(1).Padding(0, 12, 0, 12)
+		}).Grow(1).Padding(0, t.Space(3), 0, t.Space(3))
 		// ui.Table 在拖拽时原地改写 ListState.Columns（列变动没有专门
 		// 回调），每帧把改完的布局交回 Sync 比较并持久化。
 		m.prefs.Sync(h, "nodes", listState.Columns)
@@ -358,11 +360,11 @@ func (m *Module) View(h kit.ModuleHost, c *ui.Context) {
 
 func (m *Module) detailView(c *ui.Context, lang string) {
 	t := c.Theme()
-	ui.Column(c).Height(220).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
-		Background(t.Surface).Padding(12, 16, 12, 16).Gap(6).Children(func() {
-		ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+	ui.Column(c).Height(t.Space(55)).BorderWidth(1, 0, 0, 0).BorderColor(t.Border).
+		Background(t.Surface).Padding(t.Space(3), t.Space(4), t.Space(3), t.Space(4)).Gap(t.Space(1.5)).Children(func() {
+		ui.Row(c).Gap(t.Space(2)).AlignItems(ui.Center).Children(func() {
 			ui.Text(c, m.detailName).Bold()
-			ui.Text(c, kit.Tr(lang, "· 节点详情")).TextColor(t.TextMuted).FontSize(12)
+			ui.Text(c, kit.Tr(lang, "· 节点详情")).TextColor(t.TextMuted).FontSize(kit.SizeCaption(t))
 			ui.Spacer(c)
 			if ui.Button(c, kit.Tr(lang, "关闭")).Clicked() {
 				m.selectedRow = -1
@@ -373,9 +375,9 @@ func (m *Module) detailView(c *ui.Context, lang string) {
 		case m.detailLoad:
 			ui.Text(c, kit.Tr(lang, "加载中…")).TextColor(t.TextMuted)
 		case m.detailErr != nil:
-			ui.Text(c, kit.ErrMessage(m.detailErr)).FontSize(12).TextColor(ui.Hex("#d64545"))
+			ui.Text(c, kit.ErrMessage(m.detailErr)).FontSize(kit.SizeCaption(t)).TextColor(t.Danger)
 		default:
-			ui.Text(c, m.detailJSON).FontSize(12).Grow(1)
+			ui.Text(c, m.detailJSON).Font("monospace").FontSize(kit.SizeMono(t)).Grow(1)
 		}
 	})
 }
